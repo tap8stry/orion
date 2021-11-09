@@ -9,7 +9,7 @@ Our project compliments these tools with the capabilities to track software arti
 
 ### Features
 
-There are many ways that developers can compose their Dockerfile to install additional artifacts in docker build. We have selected some [sample Dockerfiles](https://github.ibm.com/tapestry/tapestry-discover/tree/main/sample-dockerfiles) from the popular github projects (those with most stars). From examining them we extract scenarios/patterns that are used in these Dockerfiles. 
+There are many ways that developers can compose their Dockerfile to install additional artifacts in docker build. We have selected some from the popular github projects (those with most stars). From examining them we extract scenarios/patterns that are used in these Dockerfiles. 
 
 **The project has implemented the tracing capaibilities for artifacts installed by the following docker operations and shell commands, which covers the majority of the scenarios.**
 
@@ -27,7 +27,7 @@ There are many ways that developers can compose their Dockerfile to install addi
 - COPY
 - ADD
 
-**The scenarios/paterns to be considered are listed [here](https://github.ibm.com/tapestry/tapestry-discover/blob/main/doc/new-scenarios.md) for further development.**
+**The scenarios/paterns yet to be addressed are listed [here](https://github.com/tap8stry/orion/blob/main/doc/new-scenarios.md) for further development.**
 
 
 ### How to run it
@@ -35,26 +35,26 @@ There are many ways that developers can compose their Dockerfile to install addi
 1. Clone the project and make a build
 
 ```
-% git clone https://github.ibm.com/tapestry/tapestry-discover.git
-% cd tapestry-discover
+% git clone https://github.com/tap8stry/orion.git
+% cd orion
 % make
 ```
 
 2. Command to scan Dockefile and produce addon installation traces
 
 ```
-% ./tapestry-discover -d=true run -d <dockerfile-path> -n <sbom-namespace> -f <output-file-path>
+% ./orion discover -d <dockerfile-path> -n <sbom-namespace> -f <output-file-path>
 ```
 
 where 
 - dockerfile-path: Dockerfile pathname
 - sbom-namespace: namespace, e.g. your project's github repository URL
-- output-file-path: file name for saving discovery results. The traces is saved to `<output-filepath>-trace.json`
+- output-file-path: file name for saving discovery results. The traces is saved to `<output-filepath>-trace.json`.
 
 3. Command to produce/verify addon installation traces and produce SBOM report
 
 ```
-% ./tapestry-discover -d=true run -d <dockerfile-path> -n <sbom-namespace> -i <image-name:tag> -f <output-file-path>
+% ./orion discover -d <dockerfile-path> -n <sbom-namespace> -i <image-name:tag> -f <output-file-path>
 ```
 The SBOM report is saved to `<output-filepath>.spdx`.
 

@@ -24,7 +24,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/tap8stry/orion/pkg/common"
 	"github.com/tap8stry/orion/pkg/parser/addon"
 	"github.com/tap8stry/orion/pkg/parser/dockerfile"
@@ -37,7 +36,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 	if err != nil {
 		return err
 	}
-	logs.Progress.Printf(" got dockerfile = %s", dfile.Filepath)
+	fmt.Printf("\n got dockerfile = %s", dfile.Filepath)
 
 	var spdxReport string
 
@@ -47,7 +46,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 		dfile.BuildStages[j].AddOnInstalls = append(dfile.BuildStages[j].AddOnInstalls, installTraces...)
 		dfile.BuildStages[j].EnvVariables = envs
 		dfile.BuildStages[j].Image = image
-		logs.Progress.Printf("generating addon traces for dockerfile = %q, stage = %q, #addons = %d", dfile.Filepath, stage.StageID, len(installTraces))
+		fmt.Printf("\ngenerating addon traces for dockerfile = %q, stage = %q, #addons = %d", dfile.Filepath, stage.StageID, len(installTraces))
 	}
 	//save traces
 	filename := fmt.Sprintf("%s-trace.%s", common.DefaultFilename, common.FormatJSON)
@@ -59,16 +58,16 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 
 	//verify and produce SPDX if image provided
 	if len(dopts.Image) > 0 {
-		logs.Debug.Printf("get image %q for dockerfile %q", dopts.Image, dfile.Filepath)
+		fmt.Printf("\nget image %q for dockerfile %q", dopts.Image, dfile.Filepath)
 		buildContextDir, err := ioutil.TempDir(os.TempDir(), "build-ctx")
 		if err != nil {
-			logs.Warn.Printf("error creating build context dir: %s", err.Error())
+			fmt.Printf("\nerror creating build context dir: %s", err.Error())
 			return err
 		}
 		defer os.RemoveAll(buildContextDir)
 		artifacts, err := addon.VerifyAddOnInstalls(buildContextDir, dopts.Image, &dfile.BuildStages[len(dfile.BuildStages)-1])
 		if err != nil {
-			logs.Warn.Printf("error verifying addon installs: %s", err.Error())
+			fmt.Printf("\nerror verifying addon installs: %s", err.Error())
 			return err
 		}
 		spdxReport, err = addon.GenerateSpdxReport(dfile.Filepath, dopts.Image, dopts.Namespace, artifacts)

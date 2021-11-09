@@ -30,9 +30,6 @@ const (
 
 //DiscoverOpts :
 type DiscoverOpts struct {
-	GitURL         string
-	GitRevision    string
-	GitCommitID    string
 	DockerfilePath string
 	OutFilepath    string
 	Format         string

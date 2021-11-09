@@ -22,15 +22,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/tap8stry/orion/cmd/discover/cli"
 )
 
 var (
-	rootFlagSet    = flag.NewFlagSet("orion", flag.ExitOnError)
-	debug          = rootFlagSet.Bool("d", false, "log debug output")
-	outputFilename = rootFlagSet.String("output-file", "", "log output to a file")
+	rootFlagSet = flag.NewFlagSet("orion", flag.ExitOnError)
 )
 
 func main() {
@@ -48,12 +45,6 @@ func main() {
 
 	if err := root.Parse(os.Args[1:]); err != nil {
 		printErrAndExit(err)
-	}
-
-	logs.Warn.SetOutput(os.Stderr)
-	logs.Progress.SetOutput(os.Stderr)
-	if *debug {
-		logs.Debug.SetOutput(os.Stderr)
 	}
 
 	if err := root.Run(context.Background()); err != nil {

@@ -77,7 +77,7 @@ func DiscoverAddonArtifacts(buildStage *common.BuildStage, dopts common.Discover
 			}
 		}
 		if strings.EqualFold(cmd.Value, dockerfile.COPY) || strings.EqualFold(cmd.Value, dockerfile.ADD) { // process COPY/ADD
-			installs := generateCopyAddTraces(workdir, cmd.Original, dopts.Namespace, dopts.GitCommitID, stageArgsEnvs)
+			installs := generateCopyAddTraces(workdir, cmd.Original, dopts.Namespace, stageArgsEnvs)
 			if installs != nil {
 				installTraces = append(installTraces, installs...)
 			}
@@ -154,10 +154,10 @@ func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string)
 }
 
 // generateCopyTraces produces the traces of one RUN of "curl" or/and "wget" install commands
-func generateCopyAddTraces(workdir, cmd, giturl, commitid string, stageargs map[string]string) []common.InstallTrace {
+func generateCopyAddTraces(workdir, cmd, namespace string, stageargs map[string]string) []common.InstallTrace {
 	installTraces := []common.InstallTrace{}
 	args := parseLine(cmd, " ")
-	installTrace, err := processCopyAdd(args, workdir, giturl, commitid, stageargs)
+	installTrace, err := processCopyAdd(args, workdir, namespace, stageargs)
 	if err == nil {
 		installTraces = append(installTraces, installTrace)
 	}

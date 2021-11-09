@@ -228,7 +228,7 @@ func processMv(args []string, workdir string, stageargs map[string]string) commo
 }
 
 // processCopyAdd parses COPY and ADD operation, e.g. COPY (or ADD) [--chown=<user>:<group> --from=<buildstage>] <src>... <dest>
-func processCopyAdd(args []string, workdir, giturl, commitid string, stageargs map[string]string) (common.InstallTrace, error) {
+func processCopyAdd(args []string, workdir, namespace string, stageargs map[string]string) (common.InstallTrace, error) {
 	installTrace := common.InstallTrace{}
 	trace := common.Trace{
 		Command: args[0],
@@ -241,8 +241,8 @@ func processCopyAdd(args []string, workdir, giturl, commitid string, stageargs m
 			if strings.HasPrefix(trace.Source, "http") {
 				installTrace.Origin = replaceArgEnvVariable(args[j], stageargs)
 			} else {
-				installTrace.Origin = fmt.Sprintf("%s", giturl)
-				installTrace.OriginHash = fmt.Sprintf("%x", sha3.Sum256([]byte(commitid)))
+				installTrace.Origin = fmt.Sprintf("%s", namespace)
+				installTrace.OriginHash = fmt.Sprintf("%x", sha3.Sum256([]byte(namespace)))
 			}
 			trace.Destination = replaceArgEnvVariable(args[len(args)-1], stageargs)
 			if !strings.HasPrefix(trace.Destination, "/") {
