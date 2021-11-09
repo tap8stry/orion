@@ -29,7 +29,6 @@ import (
 
 	"github.com/Pallinder/go-randomdata"
 	"github.com/docker/docker/client"
-	"github.com/google/go-containerregistry/pkg/logs"
 )
 
 const (
@@ -44,108 +43,87 @@ const (
 // go-sdk function for pull doesn't work for registries like
 // `registry.access.redhat.com`
 func PullDockerImage(name string, tag string) error {
-	logs.Debug.Printf("about to pull image %s:%s", name, tag)
+	fmt.Printf("\nabout to pull image %s:%s", name, tag)
 	var cmd bytes.Buffer
 	imageName := fmt.Sprintf("%s:%s", name, tag)
 	execCmd, _ := template.New("imagePull").Parse(imagePullCmdTmpl)
 	if err := execCmd.Execute(&cmd, map[string]string{
 		"ImageName": imageName,
 	}); err != nil {
-		logs.Debug.Printf("error formating docker pull exec cmd: %v", err)
+		fmt.Printf("\nerror formating docker pull exec cmd: %v", err)
 		return errors.New("unable to create Docker command [pull]")
 	}
 
 	cmdTokens := strings.Fields(cmd.String())
-	// logs.Debug.Printf("command to execute %s", cmdTokens)
 	_, err := exec.Command(cmdTokens[0], cmdTokens[1:]...).CombinedOutput()
 	if err != nil {
-		logs.Debug.Printf("error executing docker: cmd %v", err)
-		// logs.Debug.Printf("output from docker pull: " + string(outBytes))
+		fmt.Printf("\nerror executing docker: cmd %v", err)
 		return errors.New("unable to pull image from Docker repository")
 
 	}
-	// ctx := context.Background()
-	// cli, err := client.NewEnvClient()
-	// if err != nil {
-	// 	logs.Debug.Printf("error initializing client: %v", err)
-	// 	return errors.New("`image pull` failed")
-	// }
-	// if strings.Contains(name, "/") {
-	// 	imageID = fmt.Sprintf("docker.io/%s:%s", name, tag)
-	// } else {
-	// 	imageID = fmt.Sprintf("docker.io/library/%s:%s", name, tag)
-	// }
-	// out, err := cli.ImagePull(ctx, imageID, types.ImagePullOptions{})
-	// if err != nil {
-	// 	logs.Debug.Printf("error pulling image ", err)
-	// 	return errors.New("`image pull` failed")
-	// }
-	// defer out.Close()
-	// io.Copy(ioutil.Discard, out)
-	// cli.Close()
 
-	logs.Debug.Printf("successfully pulled an image %s:%s", name, tag)
+	fmt.Printf("\nsuccessfully pulled an image %s:%s", name, tag)
 	return nil
 }
 
 //GetImageDigest :
 func GetImageDigest(name string, tag string) (string, error) {
-	logs.Debug.Printf("about to fetch image digest for %s:%s", name, tag)
+	fmt.Printf("\nabout to fetch image digest for %s:%s", name, tag)
 	var digest string
 	if err := PullDockerImage(name, tag); err != nil {
-		logs.Debug.Printf("error pulling an image: %v", err)
+		fmt.Printf("\nerror pulling an image: %v", err)
 		return digest, errors.New("unable to retrieve Docker image digest")
 	}
 
 	cli, err := client.NewEnvClient()
 	if err != nil {
-		logs.Debug.Printf("error initializing client: %v", err)
+		fmt.Printf("\nerror initializing client: %v", err)
 		return digest, errors.New("unable to initialize Docker client interface")
 	}
 	imageID := fmt.Sprintf("%s:%s", name, tag)
 	imgInspect, _, err := cli.ImageInspectWithRaw(context.Background(), imageID)
 	if err != nil {
-		logs.Debug.Printf("error retrieving image digest: %v", err)
+		fmt.Printf("\nerror retrieving image digest: %v", err)
 		return digest, errors.New("unable to inspect Docker image")
 	}
 	digest = imgInspect.ID
-	logs.Debug.Printf("successfully fetched image digest for %s:%s: %s", name, tag, digest)
+	fmt.Printf("\nsuccessfully fetched image digest for %s:%s: %s", name, tag, digest)
 	return digest, nil
 }
 
 //BuildImage :
 func BuildImage(buildContext, dockerfile, imageName string) error {
-	logs.Debug.Printf("simulating partial image build for: %s", imageName)
+	fmt.Printf("\nsimulating partial image build for: %s", imageName)
 	var cmd bytes.Buffer
 	cwd, _ := os.Getwd()
 	defer os.Chdir(cwd)
 	os.Chdir(buildContext)
-	logs.Debug.Printf("buildContext = %s", buildContext)
+	fmt.Printf("\nbuildContext = %s", buildContext)
 
 	execCmd, _ := template.New("buildkitBuilder").Parse(buildkitBuildCmdTmpl)
 	if err := execCmd.Execute(&cmd, map[string]string{
 		"ImageName":  imageName,
 		"Dockerfile": dockerfile,
 	}); err != nil {
-		logs.Debug.Printf("error formating docker build exec cmd: %s", err.Error())
+		fmt.Printf("\nerror formating docker build exec cmd: %s", err.Error())
 		return errors.New("unable to create Docker command [build]")
 	}
 
 	cmdTokens := strings.Fields(cmd.String())
-	logs.Debug.Printf("command to execute %s", cmdTokens)
+	fmt.Printf("\ncommand to execute %s", cmdTokens)
 	_, err := exec.Command(cmdTokens[0], cmdTokens[1:]...).CombinedOutput()
 	if err != nil {
-		logs.Debug.Printf("error executing docker cmd %v", err.Error())
+		fmt.Printf("\nerror executing docker cmd %v", err.Error())
 		return errors.New("unable to build Docker image")
 
 	}
-	logs.Debug.Printf("partial image build completed for: %s", imageName)
+	fmt.Printf("\npartial image build completed for: %s", imageName)
 	return nil
 }
 
 //CreateContainer :
 func CreateContainer(imageName string) (string, error) {
-	logs.Debug.Printf("creating container for image: %s", imageName)
+	fmt.Printf("\ncreating container for image: %s", imageName)
 	var cmd bytes.Buffer
 	containerName := strings.ToLower(randomdata.SillyName())
 
@@ -154,16 +132,14 @@ func CreateContainer(imageName string) (string, error) {
 		"ImageName":     imageName,
 		"ContainerName": containerName,
 	}); err != nil {
-		logs.Debug.Printf("error formating docker create exec cmd: %s", err)
+		fmt.Printf("\nerror formating docker create exec cmd: %s", err)
 		return "", errors.New("unable to create Docker command [create]")
 	}
 
 	cmdTokens := strings.Fields(cmd.String())
-	// logs.Debug.Printf("command to execute %s", cmdTokens)
 	outBytes, err := exec.Command(cmdTokens[0], cmdTokens[1:]...).CombinedOutput()
 	if err != nil {
-		logs.Debug.Printf("error executing docker cmd %v", err)
-		// logs.Debug.Printf("output from docker create: " + string(outBytes))
+		fmt.Printf("\nerror executing docker cmd %v", err)
 		return "", errors.New("unable to create a container for the Docker image")
 
 	}
@@ -175,46 +151,44 @@ func CreateContainer(imageName string) (string, error) {
 
 	inpsectContainerCmd := fmt.Sprintf("docker inspect %s ", containerName)
 	cmdTokens = strings.Fields(inpsectContainerCmd)
-	// logs.Debug.Printf("command to execute %s", cmdTokens)
 	outBytes, err = exec.Command(cmdTokens[0], cmdTokens[1:]...).CombinedOutput()
 	if err != nil {
-		logs.Debug.Printf("error executing docker inspect %v", err)
-		//logs.Debug.Printf("output from docker inspect: " + string(outBytes))
+		fmt.Printf("\nerror executing docker inspect %v", err)
 		return "", errors.New("unable to create Docker command [inspect]")
 
 	}
 	if err := json.Unmarshal(outBytes, &inspectOut); err != nil {
-		logs.Debug.Printf("error parsing container inspect: %v", err)
+		fmt.Printf("\nerror parsing container inspect: %v", err)
 		return "", errors.New("unable to inspect a Docker container")
 	}
 	containerID := inspectOut[0].ID
-	logs.Debug.Printf("container creation completed for image: %s", imageName)
+	fmt.Printf("\ncontainer creation completed for image: %s", imageName)
 	return containerID, nil
 }
 
 //ExportImageToLocalDir :
 func ExportImageToLocalDir(tarfilePath, containerID string) error {
-	logs.Debug.Printf("exporting image to local directory: ")
+	fmt.Printf("\nexporting image to local directory: ")
 	var cmd bytes.Buffer
 	execCmd, _ := template.New("exportImage").Parse(exportImageCmdTmpl)
 	if err := execCmd.Execute(&cmd, map[string]string{
 		"ContainerID": containerID,
 		"TarPath":     tarfilePath,
 	}); err != nil {
-		logs.Debug.Printf("error formating docker export exec cmd: %s", err)
+		fmt.Printf("\nerror formating docker export exec cmd: %s", err)
 		return errors.New("unable to create Docker command [export]")
 	}
 
 	cmdTokens := strings.Fields(cmd.String())
-	logs.Debug.Printf("command to execute %s", cmdTokens)
+	fmt.Printf("\ncommand to execute %s", cmdTokens)
 	_, err := exec.Command(cmdTokens[0], cmdTokens[1:]...).CombinedOutput()
 	if err != nil {
-		logs.Debug.Printf("error executing docker cmd %v", err)
-		// logs.Debug.Printf("output from docker export: " + string(outBytes))
+		fmt.Printf("\nerror executing docker cmd %v", err)
+		// fmt.Printf("\noutput from docker export: " + string(outBytes))
 		return errors.New("unable to export a Docker container")
 
 	}
-	logs.Debug.Printf("image export to local directory completed")
+	fmt.Printf("\nimage export to local directory completed")
 	return nil
 }
 
@@ -227,17 +201,16 @@ func UntarImageToLocalDir(tarfilePath, localdir string) error {
 		"LocalDir": localdir,
 		"TarPath":  tarfilePath,
 	}); err != nil {
-		logs.Debug.Printf("error formating untar exec cmd: %s", err)
+		fmt.Printf("\nerror formating untar exec cmd: %s", err)
 		return errors.New("unable to create Docker command [tar]")
 	}
 
 	cmdTokens := strings.Fields(cmd.String())
-	logs.Debug.Printf("command to execute %s", cmdTokens)
-	logs.Debug.Printf("localDir: %s, tarFile: %s", localdir, tarfilePath)
+	fmt.Printf("\ncommand to execute %s", cmdTokens)
+	fmt.Printf("\nlocalDir: %s, tarFile: %s", localdir, tarfilePath)
 	_, err := exec.Command(cmdTokens[0], cmdTokens[1:]...).CombinedOutput()
 	if err != nil {
-		logs.Debug.Printf("error executing untar cmd: %v", err.Error())
-		//logs.Debug.Printf("output from untar: " + string(outBytes))
+		fmt.Printf("\nerror executing untar cmd: %v", err.Error())
 		return errors.New("unable to compress a Docker image")
 	}
 	return nil

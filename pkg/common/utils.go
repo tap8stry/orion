@@ -17,13 +17,12 @@
 package common
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/google/go-containerregistry/pkg/logs"
 )
 
 // SearchFiles returns matched file patterns or nil if none found
@@ -55,9 +54,9 @@ func SaveFile(filename string, data []byte) {
 	if len(data) > 0 {
 		err := ioutil.WriteFile(filename, data, 0644)
 		if err != nil {
-			logs.Warn.Printf("error writing data to %q", filename)
+			fmt.Printf("\nerror writing data to %q", filename)
 			return
 		}
-		logs.Progress.Printf("results saved to: %q", filename)
+		fmt.Printf("\nresults saved to: %q", filename)
 	}
 }

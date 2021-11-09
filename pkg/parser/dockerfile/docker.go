@@ -24,7 +24,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/tap8stry/orion/pkg/common"
 	"golang.org/x/crypto/sha3"
@@ -44,13 +43,13 @@ const (
 func GetDockerfileReader(filepath string) (*parser.Result, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
-		logs.Warn.Printf("Error opening dockerfile: %v", err)
+		fmt.Printf("\nError opening dockerfile: %v", err)
 		return nil, err
 	}
 
 	res, err := parser.Parse(file)
 	if err != nil {
-		logs.Warn.Printf("Error parsing dockerfile: %v", err)
+		fmt.Printf("\nError parsing dockerfile: %v", err)
 		return nil, err
 	}
 
@@ -63,7 +62,7 @@ func GetDockerfile(f string) (common.Dockerfile, error) {
 	cm.Filepath = f
 	data, err := ioutil.ReadFile(f)
 	if err != nil {
-		logs.Warn.Printf("erring reading dockerfile %q: %s", f, err.Error())
+		fmt.Printf("\nerring reading dockerfile %q: %s", f, err.Error())
 		return cm, err
 	}
 	cm.Filehash = fmt.Sprintf("%x", sha3.Sum256(data))
@@ -201,7 +200,7 @@ func DiscoverBuildStages(dockerfp, fileKey string) ([]common.BuildStage, error) 
 				parentStageID := strings.Split(flag, "=")[1]
 				parentStage, err := getParentStage(stages, parentStageID)
 				if err != nil {
-					logs.Warn.Printf("error parsing dockerfile: %v", err)
+					fmt.Printf("\nerror parsing dockerfile: %v", err)
 				}
 				curStage.DependsOn = parentStage.StageID
 			}

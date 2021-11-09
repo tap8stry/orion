@@ -23,7 +23,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/tap8stry/orion/pkg/common"
 	"github.com/tap8stry/orion/pkg/dind"
@@ -38,7 +37,7 @@ const (
 func displayDockerfile(pDfp string) {
 	dat, err := os.ReadFile(pDfp)
 	check(err)
-	fmt.Print("temp dockerfile = \n" + string(dat))
+	fmt.Print("\ntemp dockerfile = \n" + string(dat))
 }
 func check(e error) {
 	if e != nil {
@@ -49,16 +48,16 @@ func check(e error) {
 //VerifyAddOnInstalls :
 func VerifyAddOnInstalls(buildContextDir, image string, buildStage *common.BuildStage) ([]common.VerifiedArtifact, error) {
 	if len(buildStage.AddOnInstalls) == 0 {
-		logs.Progress.Printf("no AddOnInstalls found for build stage = %s", buildStage.StageID)
+		fmt.Printf("\nno AddOnInstalls found for build stage = %s", buildStage.StageID)
 		return nil, nil
 	}
 
 	fsdir, err := getImageFs(image, buildContextDir)
 	if err != nil {
-		logs.Warn.Printf("error in creating image filesystem: %s\n", err.Error())
+		fmt.Printf("\nerror in creating image filesystem: %s\n", err.Error())
 		return nil, err
 	}
-	logs.Progress.Printf("verify, image-fsdir=%s", fsdir)
+	fmt.Printf("\nverify, image-fsdir=%s", fsdir)
 	verified := verifyArtifacts(buildStage.AddOnInstalls, fsdir)
 	return verified, nil
 }
@@ -69,14 +68,14 @@ func getImageFs(image, buildContextDir string) (string, error) {
 	/*	imageName := strings.ToLower(randomdata.SillyName())
 		//build docker image
 		if err := dind.BuildImage(repodir, pDfp, imageName); err != nil {
-			logs.Debug.Printf("error running dind build: %v", err)
+			fmt.Printf("\nerror running dind build: %v", err)
 			return "", errors.New("unable to build Docker image")
 		}
 	*/
 	//create a docker container of the image
 	containerID, err := dind.CreateContainer(image)
 	if err != nil {
-		logs.Debug.Printf("error creatting container: %v", err)
+		fmt.Printf("\nerror creatting container: %v", err)
 		return "", errors.New("unable to run Dokcer container")
 	}
 
@@ -84,14 +83,14 @@ func getImageFs(image, buildContextDir string) (string, error) {
 	unpackDirRootfs := path.Join(buildContextDir, "rootfs")
 	os.MkdirAll(unpackDirRootfs, 0744)
 	tarfilePath := path.Join(buildContextDir, fmt.Sprintf("%s.tar.gz", image[:strings.LastIndex(image, ":")]))
-	logs.Progress.Printf("export image to file system: %s", tarfilePath)
+	fmt.Printf("\nexport image to file system: %s", tarfilePath)
 	if err := dind.ExportImageToLocalDir(tarfilePath, containerID); err != nil {
-		logs.Debug.Printf("error running dind export: %v", err)
+		fmt.Printf("\nerror running dind export: %v", err)
 		return "", errors.New("unable to export Docker image")
 	}
-	logs.Progress.Printf("untar image file to: %s", unpackDirRootfs)
+	fmt.Printf("\nuntar image file to: %s", unpackDirRootfs)
 	if err := dind.UntarImageToLocalDir(tarfilePath, unpackDirRootfs); err != nil {
-		logs.Debug.Printf("error running untar: %v", err)
+		fmt.Printf("\nerror running untar: %v", err)
 		return "", errors.New("unable to extract Docker image locally")
 	}
 	return unpackDirRootfs, nil
@@ -124,7 +123,7 @@ func verifyArtifacts(installs []common.InstallTrace, fsdir string) []common.Veri
 			artifacts = append(artifacts, art)
 		}
 	}
-	logs.Debug.Printf("# of verified artifacts = %d", len(artifacts))
+	fmt.Printf("\n# of verified artifacts = %d", len(artifacts))
 	return artifacts
 }
 
@@ -152,7 +151,7 @@ func getPath(trace common.Trace, dir string) (string, bool, error) {
 	//des = dir + des
 	info, err := os.Stat(dir + des)
 	if os.IsNotExist(err) {
-		logs.Debug.Printf("folder/file %s does not exist for verifying", dir+trace.Destination)
+		fmt.Printf("\nfolder/file %s does not exist for verifying", dir+trace.Destination)
 		return "", false, err
 	}
 	if strings.EqualFold(des, "/") || len(des) == 0 { // root directory
@@ -161,7 +160,7 @@ func getPath(trace common.Trace, dir string) (string, bool, error) {
 	if info.IsDir() {
 		_, err = dirhash.HashDir(dir+des, "", dirhash.DefaultHash) //
 		if err != nil {
-			logs.Debug.Printf("sha for folder %s cannot be calculated", dir+trace.Destination)
+			fmt.Printf("\nsha for folder %s cannot be calculated", dir+trace.Destination)
 			return dir + des, info.IsDir(), err
 		}
 	}
@@ -186,7 +185,7 @@ func checkCpDestination(trace common.Trace, dir string) (string, error) {
 	des = strings.TrimSuffix(des, "/") //e.g. /usr/bin/ --> /usr/bin
 	info, err := os.Stat(dir + des)    // e.g. /tmp/build-ctx00032/rootfs/usr/bin
 	if os.IsNotExist(err) {
-		logs.Debug.Printf("folder/file %s does not exist", dir+des)
+		fmt.Printf("\nfolder/file %s does not exist", dir+des)
 		return "", err
 	}
 	if info.IsDir() { // destination is a directory

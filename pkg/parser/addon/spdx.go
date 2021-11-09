@@ -17,9 +17,9 @@
 package addon
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/tap8stry/orion/pkg/common"
 	"k8s.io/release/pkg/spdx"
 )
@@ -30,19 +30,19 @@ func GenerateSpdxReport(dockerfilename, image, namespace string, artifacts []com
 	doc.Namespace = namespace
 	doc.Creator.Person = "Tester Tester"
 	doc.Creator.Tool = []string{"https://github.ibm.com/tapestry/tapestry-discover", "k8s.io/release/pkg/spdx"}
-	logs.Progress.Printf("create a new SPDX doc %q, namespace=%q", doc.Name, doc.Namespace)
+	fmt.Printf("\ncreate a new SPDX doc %q, namespace=%q", doc.Name, doc.Namespace)
 
 	for _, art := range artifacts {
 		if art.IsDirectory {
 			myspdx := spdx.NewSPDX()
 			pkg, err := myspdx.PackageFromDirectory(art.Path)
 			if err != nil {
-				logs.Warn.Printf("\nerror creating package for directory %s, error = %s", art.Path, err.Error())
+				fmt.Printf("\n\nerror creating package for directory %s, error = %s", art.Path, err.Error())
 			}
 			pkg.DownloadLocation = art.DownloadLocation
 			pkg.FileName = art.Path[strings.Index(art.Path, "rootfs/")+7:]
 			if err := doc.AddPackage(pkg); err != nil {
-				logs.Warn.Printf("\nerror in adding package to document: %s", err.Error())
+				fmt.Printf("\n\nerror in adding package to document: %s", err.Error())
 			}
 		} else {
 			f := spdx.NewFile()
@@ -58,21 +58,21 @@ func GenerateSpdxReport(dockerfilename, image, namespace string, artifacts []com
 				pkg.DownloadLocation = art.DownloadLocation
 				pkg.FileName = name
 				if err := pkg.AddFile(f); err != nil {
-					logs.Warn.Printf("error in adding file to package: %s", err.Error())
+					fmt.Printf("\nerror in adding file to package: %s", err.Error())
 				}
 				if err := doc.AddPackage(pkg); err != nil {
-					logs.Warn.Printf("error in adding package to document: %s", err.Error())
+					fmt.Printf("\nerror in adding package to document: %s", err.Error())
 				}
 			} else { //add file to document
 				if err := doc.AddFile(f); err != nil {
-					logs.Warn.Printf("error in adding file to document: %s", err.Error())
+					fmt.Printf("\nerror in adding file to document: %s", err.Error())
 				}
 			}
 		}
 	}
 	markup, err := doc.Render()
 	if err != nil {
-		logs.Debug.Printf("error in rendering SPDX document: %s", err.Error())
+		fmt.Printf("\nerror in rendering SPDX document: %s", err.Error())
 		return "", err
 	}
 	return markup, nil

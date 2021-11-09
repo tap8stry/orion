@@ -20,8 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/tap8stry/orion/pkg/common"
@@ -35,28 +35,22 @@ func Discover() *ffcli.Command {
 		dockerfile = flagset.String("d", "", "dockerfile pathname")
 		image      = flagset.String("i", "", "image name:tag")
 		namespace  = flagset.String("n", "", "SBOM namespace")
-		giturl     = flagset.String("g", "", "git url for the source code")
-		revision   = flagset.String("r", "", "revision/branch name")
-		commitid   = flagset.String("c", "", "commit id for the code")
-		outputfp   = flagset.String("f", "", "output file path, default: ./result.json")
-		format     = flagset.String("o", "", "output format (json, spdx) default: json")
+		outputfp   = flagset.String("f", "", "output file path, default: ./result.spdx")
+		format     = flagset.String("o", "", "output format (json, spdx) default: spdx")
 	)
 	return &ffcli.Command{
 		Name:       "discover",
-		ShortUsage: "orion discover -d <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -g <git-url> -r <git-revision> -c <commit-id> -f <output filepath> -o <format>",
+		ShortUsage: "orion discover -d <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -f <output filepath> -o <format>",
 		ShortHelp:  `Discover software dependencies`,
 		LongHelp: `Discover software dependencies not managed by package managers
 EXAMPLES
   # discover all dependencies not managed by package managers
-  orion discover -d ./Dockerfile -i binderancient:latest -n https://github.com/myorg/myproject -f result.json -o json
+  orion discover -d ./Dockerfile -i binderancient:latest -n https://github.com/myorg/myproject -f result.spdx -o spdx
 `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
 
 			dopts := common.DiscoverOpts{
-				GitURL:         *giturl,
-				GitRevision:    *revision,
-				GitCommitID:    *commitid,
 				DockerfilePath: *dockerfile,
 				Image:          *image,
 				Namespace:      *namespace,
@@ -76,7 +70,7 @@ EXAMPLES
 //DiscoveryDeps :
 func DiscoveryDeps(ctx context.Context, dopts common.DiscoverOpts) error {
 	b, _ := json.Marshal(dopts)
-	logs.Debug.Printf("Start discovery with inputs: %q", string(b))
+	fmt.Printf("\nStart discovery with inputs: %q", string(b))
 	engine.StartDiscovery(context.Background(), dopts)
 	return nil
 }
