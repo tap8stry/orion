@@ -1,4 +1,4 @@
-module github.com/tapestry-discover
+module github.com/tap8stry/orion
 
 go 1.16
 

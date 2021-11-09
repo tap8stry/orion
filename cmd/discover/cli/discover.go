@@ -1,3 +1,19 @@
+//
+// Copyright 2020 IBM Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package cli
 
 import (
@@ -8,14 +24,14 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
-	"github.com/tapestry-discover/pkg/common"
-	"github.com/tapestry-discover/pkg/engine"
+	"github.com/tap8stry/orion/pkg/common"
+	"github.com/tap8stry/orion/pkg/engine"
 )
 
 //Discover :
 func Discover() *ffcli.Command {
 	var (
-		flagset    = flag.NewFlagSet("run", flag.ExitOnError)
+		flagset    = flag.NewFlagSet("discover", flag.ExitOnError)
 		dockerfile = flagset.String("d", "", "dockerfile pathname")
 		image      = flagset.String("i", "", "image name:tag")
 		namespace  = flagset.String("n", "", "SBOM namespace")
@@ -26,13 +42,13 @@ func Discover() *ffcli.Command {
 		format     = flagset.String("o", "", "output format (json, spdx) default: json")
 	)
 	return &ffcli.Command{
-		Name:       "run",
-		ShortUsage: "tapestry-discover run -d <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -g <git-url> -r <git-revision> -c <commit-id> -f <output filepath> -o <format>",
+		Name:       "discover",
+		ShortUsage: "orion discover -d <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -g <git-url> -r <git-revision> -c <commit-id> -f <output filepath> -o <format>",
 		ShortHelp:  `Discover software dependencies`,
 		LongHelp: `Discover software dependencies not managed by package managers
 EXAMPLES
   # discover all dependencies not managed by package managers
-  tapestry-discover run -d ./Dockerfile -i binderancient:latest -n https://github.com/myorg/myproject -f result.json -o json
+  orion discover -d ./Dockerfile -i binderancient:latest -n https://github.com/myorg/myproject -f result.json -o json
 `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
