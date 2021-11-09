@@ -1,7 +1,7 @@
 VERSION=$(shell git describe --tags --always)
 COMMIT=$(shell git rev-parse HEAD)
 BUILD=$(shell date +%FT%T%z)
-PKG=github.com/tapestry-discover/cmd/discover/cli
+PKG=github.com/tap8stry/orion/cmd/discover/cli
 
 LDFLAGS="-X $(PKG).version=$(VERSION) -X $(PKG).commit=$(COMMIT) -X $(PKG).date=$(BUILD)"
 
@@ -55,7 +55,7 @@ ci: lint test ## Run all the tests and code checks
 
 .PHONY: build
 build: ## Build a version
-	go build -ldflags ${LDFLAGS} -o tapestry-discover cmd/discover/main.go
+	go build -ldflags ${LDFLAGS} -o orion cmd/discover/main.go
 
 .PHONY: clean
 clean: ## Remove temporary files
