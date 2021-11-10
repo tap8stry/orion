@@ -82,7 +82,7 @@ func getImageFs(image, buildContextDir string) (string, error) {
 	//export the container and untar it to the filesystem
 	unpackDirRootfs := path.Join(buildContextDir, "rootfs")
 	os.MkdirAll(unpackDirRootfs, 0744)
-	tarfilePath := path.Join(buildContextDir, fmt.Sprintf("%s.tar.gz", image[:strings.LastIndex(image, ":")]))
+	tarfilePath := path.Join(buildContextDir, fmt.Sprintf("%s.tar.gz", image[strings.LastIndex(image, "/")+1:strings.LastIndex(image, ":")]))
 	fmt.Printf("\nexport image to file system: %s", tarfilePath)
 	if err := dind.ExportImageToLocalDir(tarfilePath, containerID); err != nil {
 		fmt.Printf("\nerror running dind export: %v", err)

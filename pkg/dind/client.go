@@ -152,10 +152,10 @@ func CreateContainer(imageName string) (string, error) {
 	inpsectContainerCmd := fmt.Sprintf("docker inspect %s ", containerName)
 	cmdTokens = strings.Fields(inpsectContainerCmd)
 	outBytes, err = exec.Command(cmdTokens[0], cmdTokens[1:]...).CombinedOutput()
+
 	if err != nil {
 		fmt.Printf("\nerror executing docker inspect %v", err)
 		return "", errors.New("unable to create Docker command [inspect]")
-
 	}
 	if err := json.Unmarshal(outBytes, &inspectOut); err != nil {
 		fmt.Printf("\nerror parsing container inspect: %v", err)
@@ -168,7 +168,6 @@ func CreateContainer(imageName string) (string, error) {
 
 //ExportImageToLocalDir :
 func ExportImageToLocalDir(tarfilePath, containerID string) error {
-	fmt.Printf("\nexporting image to local directory: ")
 	var cmd bytes.Buffer
 	execCmd, _ := template.New("exportImage").Parse(exportImageCmdTmpl)
 	if err := execCmd.Execute(&cmd, map[string]string{
