@@ -1,4 +1,4 @@
-# tapestry-discover 
+# orion
 
 The repository is a tool that generates software inventory of a container image, specifically the software installations that are not managed through package managers. Developers ofter install additional software artifacts through RUN shell commands and COPY/ADD during docker build besides OS packages and open-source software packages. Such installations need to be counted in order to produce a complete and accurate SBOM for security compliance and auditing purposes. 
 
