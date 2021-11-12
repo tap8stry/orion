@@ -16,7 +16,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"k8s.io/release/pkg/spdx"
 )
 
@@ -132,7 +131,7 @@ func getImageReferences(imageName string) ([]struct {
 	}
 	// If the reference points to an image, return it
 	if descr.MediaType.IsImage() {
-		logrus.Infof("Reference %s points to a single image", imageName)
+		fmt.Printf("Reference %s points to a single image", imageName)
 		// Check if we can get an image
 		im, err := descr.Image()
 		if err != nil {
@@ -155,7 +154,7 @@ func getImageReferences(imageName string) ([]struct {
 			return nil, errors.Wrap(err, "building single image digest")
 		}
 
-		logrus.Infof("Adding image digest %s from reference", dig.String())
+		fmt.Printf("Adding image digest %s from reference", dig.String())
 		return append(images, struct {
 			Digest string
 			Arch   string
@@ -172,7 +171,7 @@ func getImageReferences(imageName string) ([]struct {
 	if err != nil {
 		return nil, errors.Wrapf(err, "getting index manifest from %s", imageName)
 	}
-	logrus.Infof("Reference image index points to %d manifests", len(indexManifest.Manifests))
+	fmt.Printf("Reference image index points to %d manifests", len(indexManifest.Manifests))
 
 	for _, manifest := range indexManifest.Manifests {
 		dig, err := name.NewDigest(
@@ -185,7 +184,7 @@ func getImageReferences(imageName string) ([]struct {
 			return nil, errors.Wrap(err, "generating digest for image")
 		}
 
-		logrus.Infof(
+		fmt.Printf(
 			"Adding image %s/%s@%s:%s (%s/%s)",
 			tag.RegistryStr(), tag.RepositoryStr(), manifest.Digest.Algorithm, manifest.Digest.Hex,
 			manifest.Platform.Architecture, manifest.Platform.OS,
