@@ -58,7 +58,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 
 	//verify and produce SPDX if image provided
 	if len(dopts.Image) > 0 {
-		fmt.Printf("\nget image %q for dockerfile %q", dopts.Image, dfile.Filepath)
+		fmt.Printf("\nget image %q for dockerfile %q\n", dopts.Image, dfile.Filepath)
 		buildContextDir, err := ioutil.TempDir(os.TempDir(), "build-ctx")
 		if err != nil {
 			fmt.Printf("\nerror creating build context dir: %s", err.Error())

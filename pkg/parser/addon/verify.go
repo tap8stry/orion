@@ -20,12 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/tap8stry/orion/pkg/common"
-	"github.com/tap8stry/orion/pkg/dind"
+	"github.com/tap8stry/orion/pkg/imagefs"
 	"golang.org/x/mod/sumdb/dirhash"
 )
 
@@ -52,7 +51,7 @@ func VerifyAddOnInstalls(buildContextDir, image string, buildStage *common.Build
 		return nil, nil
 	}
 
-	fsdir, err := getImageFs(image, buildContextDir)
+	fsdir, err := imagefs.Get(image, buildContextDir)
 	if err != nil {
 		fmt.Printf("\nerror in creating image filesystem: %s\n", err.Error())
 		return nil, err
@@ -60,40 +59,6 @@ func VerifyAddOnInstalls(buildContextDir, image string, buildStage *common.Build
 	fmt.Printf("\nverify, image-fsdir=%s", fsdir)
 	verified := verifyArtifacts(buildStage.AddOnInstalls, fsdir)
 	return verified, nil
-}
-
-//getImageFs returns the file system from image build for the input dockerfile data
-func getImageFs(image, buildContextDir string) (string, error) {
-
-	/*	imageName := strings.ToLower(randomdata.SillyName())
-		//build docker image
-		if err := dind.BuildImage(repodir, pDfp, imageName); err != nil {
-			fmt.Printf("\nerror running dind build: %v", err)
-			return "", errors.New("unable to build Docker image")
-		}
-	*/
-	//create a docker container of the image
-	containerID, err := dind.CreateContainer(image)
-	if err != nil {
-		fmt.Printf("\nerror creatting container: %v", err)
-		return "", errors.New("unable to run Dokcer container")
-	}
-
-	//export the container and untar it to the filesystem
-	unpackDirRootfs := path.Join(buildContextDir, "rootfs")
-	os.MkdirAll(unpackDirRootfs, 0744)
-	tarfilePath := path.Join(buildContextDir, fmt.Sprintf("%s.tar.gz", image[strings.LastIndex(image, "/")+1:strings.LastIndex(image, ":")]))
-	fmt.Printf("\nexport image to file system: %s", tarfilePath)
-	if err := dind.ExportImageToLocalDir(tarfilePath, containerID); err != nil {
-		fmt.Printf("\nerror running dind export: %v", err)
-		return "", errors.New("unable to export Docker image")
-	}
-	fmt.Printf("\nuntar image file to: %s", unpackDirRootfs)
-	if err := dind.UntarImageToLocalDir(tarfilePath, unpackDirRootfs); err != nil {
-		fmt.Printf("\nerror running untar: %v", err)
-		return "", errors.New("unable to extract Docker image locally")
-	}
-	return unpackDirRootfs, nil
 }
 
 func verifyArtifacts(installs []common.InstallTrace, fsdir string) []common.VerifiedArtifact {
