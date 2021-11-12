@@ -58,3 +58,17 @@ where
 ```
 The SBOM report is saved to `<output-filepath>.spdx`.
 
+4. Work around if encounter access permission issue when decompressing image tarball
+
+You may encounter error messages like the following when running the command 3. 
+
+```
+error executing untar cmd: exit status 1
+error untar image layer "356f18f3a935b2f226093720b65383048249413ed99da72c87d5be58cc46661c.tar.gz": unable to untar an image file
+```
+
+This is caused by the access permission when decompressing the image tar file to a temperary file system. You can use `sudo` command to work around this problem, see the command below.
+
+```
+% sudo ./orion discover -d <dockerfile-path> -n <sbom-namespace> -i <image-name:tag> -f <output-file-path>
+```
