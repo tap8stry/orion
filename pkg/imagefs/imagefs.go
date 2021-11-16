@@ -1,12 +1,12 @@
 package imagefs
 
 import (
-	"bytes"
+	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"html/template"
+	"io"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 
@@ -19,11 +19,6 @@ import (
 	"k8s.io/release/pkg/spdx"
 )
 
-const (
-	untarToLocalDirCmdTmpl = `tar -C {{.LocalDir}} -xf {{.TarPath}}`
-	removeTarFileCmdTmpl   = `rm {{.File}}`
-)
-
 //Get generates a file system of the image and returns file system path
 func Get(imageName, buildContextDir string) (string, error) {
 	rootDir := ""
@@ -32,30 +27,41 @@ func Get(imageName, buildContextDir string) (string, error) {
 		fmt.Printf("\nerror in getImageReferences: %s", err.Error())
 		return "", err
 	}
-	if len(imageRefs) == 0 || len(imageRefs) > 1 {
+	if len(imageRefs) == 0 {
 		fmt.Printf("\n%d image references found for %q", len(imageRefs), imageName)
 		return "", err
 	}
-
-	for _, refData := range imageRefs {
-		ref, err := name.ParseReference(refData.Digest)
-		if err != nil {
-			fmt.Printf("\nparsing reference %s", imageName)
-			return "", err
-		}
-
-		img, err := remote.Image(ref)
-		if err != nil {
-			fmt.Printf("\nerror getting image %q", ref.Name())
-			return "", err
-		}
-
-		rootDir, err = generateImageFileSystem(buildContextDir, img, ref)
-		if err != nil {
-			fmt.Printf("\nerror from getImageFileSystem(): %s", err.Error())
-			return "", err
+	refData := imageRefs[0]
+	if len(imageRefs) > 1 {
+		//e.g. images for different hardware architectures such as amd64, s390x, ppc64le
+		//will pick amd64 if present, otherwise pick the first
+		fmt.Printf("\n%d image references found for %q", len(imageRefs), imageName)
+		for i, refData := range imageRefs {
+			if strings.Contains(strings.ToLower(refData.Arch), "amd64") {
+				refData = imageRefs[i]
+			}
 		}
 	}
+	fmt.Printf("\ndownload tarball for %q, arch=%q", imageName, refData.Arch)
+
+	ref, err := name.ParseReference(refData.Digest)
+	if err != nil {
+		fmt.Printf("\nparsing reference %s", imageName)
+		return "", err
+	}
+
+	img, err := remote.Image(ref)
+	if err != nil {
+		fmt.Printf("\nerror getting image %q", ref.Name())
+		return "", err
+	}
+
+	rootDir, err = generateImageFileSystem(buildContextDir, img, ref)
+	if err != nil {
+		fmt.Printf("\nerror from getImageFileSystem(): %s", err.Error())
+		return "", err
+	}
+
 	fmt.Printf("\ndirectory for image %q is: %s", imageName, rootDir)
 	return rootDir, nil
 }
@@ -71,7 +77,7 @@ func generateImageFileSystem(unpackdir string, img v1.Image, ref name.Reference)
 
 	unpackDirRootfs := path.Join(unpackdir, "rootfs")
 	os.MkdirAll(unpackDirRootfs, 0744)
-	if err := unpackImageToFileSystem(unpackDirRootfs, tarfile); err != nil {
+	if err := untar(tarfile, unpackDirRootfs); err != nil {
 		fmt.Printf("\nerror unpack %q to file system %q", tarfile, unpackDirRootfs)
 		return unpackDirRootfs, err
 	}
@@ -81,9 +87,9 @@ func generateImageFileSystem(unpackdir string, img v1.Image, ref name.Reference)
 		fmt.Printf("\nerror untar image %q: %s", tarfile, err.Error())
 		return "", err
 	}
-	for _, file := range manifest.LayerFiles { //each layer is in a tar.gz file
+	for _, file := range manifest.LayerFiles { //untar the tar.gz file for each layer
 		filepath := path.Join(unpackDirRootfs, file)
-		err = unpackImageToFileSystem(unpackDirRootfs, filepath) //untar each layer
+		err = untar(filepath, unpackDirRootfs)
 		if err != nil {
 			fmt.Printf("\nerror untar image layer %q: %s", file, err.Error())
 			return "", err
@@ -208,28 +214,57 @@ func getImageReferences(imageName string) ([]struct {
 	return images, nil
 }
 
-//unpackImageToFileSystem untars a tarball to the directory
-func unpackImageToFileSystem(dir, tarfile string) error {
-
-	var cmd bytes.Buffer
-	execCmd, _ := template.New("untarImage").Parse(untarToLocalDirCmdTmpl)
-
-	if err := execCmd.Execute(&cmd, map[string]string{
-		"LocalDir": dir,
-		"TarPath":  tarfile,
-	}); err != nil {
-		fmt.Printf("\nerror formating untar exec cmd: %s", err)
-		return errors.New("unable to create command [tar]")
-	}
-
-	cmdTokens := strings.Fields(cmd.String())
-	fmt.Printf("\ncommand to execute %s", cmdTokens)
-	_, err := exec.Command(cmdTokens[0], cmdTokens[1:]...).CombinedOutput()
+//untar .tar or .tar.gz file into target directory
+func untar(tarball, target string) error {
+	fmt.Printf("\nuntar1 %q to %s", tarball, target)
+	file, err := os.Open(tarball)
 	if err != nil {
-		fmt.Printf("\nerror executing untar cmd: %s", err.Error())
-		return errors.New("unable to untar an image file")
+		fmt.Printf("\nerror1 in untar1 %s", err.Error())
+		return err
 	}
-	removeFile(tarfile)
+	defer file.Close()
+
+	var fileReader io.ReadCloser = file
+	if strings.HasSuffix(tarball, ".gz") {
+		if fileReader, err = gzip.NewReader(file); err != nil {
+			fmt.Printf("\nerror2 in untar1 %s", err.Error())
+			return err
+		}
+		defer fileReader.Close()
+	}
+
+	tarReader := tar.NewReader(fileReader)
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			fmt.Printf("\nerror3 in untar1 %s", err.Error())
+			return err
+		}
+
+		path := path.Join(target, header.Name)
+		info := header.FileInfo()
+		if info.IsDir() {
+			if err = os.MkdirAll(path, info.Mode()); err != nil {
+				fmt.Printf("\nerror4 in untar1 %s", err.Error())
+				return err
+			}
+			continue
+		}
+		file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
+		if err != nil {
+			fmt.Printf("\nerror5 in untar1 %s", err.Error())
+			return err
+		}
+
+		_, err = io.Copy(file, tarReader)
+		if err != nil {
+			fmt.Printf("\nerror6 in untar1 %s", err.Error())
+			return err
+		}
+		file.Close()
+	}
 	return nil
 }
 
@@ -246,27 +281,4 @@ func getManifest(filename string) (spdx.ArchiveManifest, error) {
 		return spdx.ArchiveManifest{}, errors.New(fmt.Sprintf("error unmarshalling manifest file %q: %s", filename, err.Error()))
 	}
 	return manifestData[0], nil
-}
-
-//removeFile deletes file
-func removeFile(file string) error {
-
-	var cmd bytes.Buffer
-	execCmd, _ := template.New("removeTarFile").Parse(removeTarFileCmdTmpl)
-
-	if err := execCmd.Execute(&cmd, map[string]string{
-		"File": file,
-	}); err != nil {
-		fmt.Printf("\nerror formating rm exec cmd: %s", err)
-		return errors.New("unable to create rm command")
-	}
-
-	cmdTokens := strings.Fields(cmd.String())
-	fmt.Printf("\ncommand to execute %s", cmdTokens)
-	_, err := exec.Command(cmdTokens[0], cmdTokens[1:]...).CombinedOutput()
-	if err != nil {
-		fmt.Printf("\nerror executing rm cmd: %s", err.Error())
-		return errors.New("unable to rm file")
-	}
-	return nil
 }
