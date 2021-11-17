@@ -25,11 +25,10 @@ func Get(imageName, buildContextDir string) (string, error) {
 	imageRefs, err := getImageReferences(imageName)
 	if err != nil {
 		fmt.Printf("\nerror in getImageReferences: %s", err.Error())
-		return "", err
+		return "", errors.Wrap(err, "getting image references from container registry")
 	}
 	if len(imageRefs) == 0 {
-		fmt.Printf("\n%d image references found for %q", len(imageRefs), imageName)
-		return "", err
+		return "", fmt.Errorf("\n%d image references found for %q", len(imageRefs), imageName)
 	}
 	refData := imageRefs[0]
 	if len(imageRefs) > 1 {
@@ -42,27 +41,25 @@ func Get(imageName, buildContextDir string) (string, error) {
 			}
 		}
 	}
-	fmt.Printf("\ndownload tarball for %q, arch=%q", imageName, refData.Arch)
 
+	fmt.Printf("\ndownload tarball for %q, arch=%q", imageName, refData.Arch)
 	ref, err := name.ParseReference(refData.Digest)
 	if err != nil {
 		fmt.Printf("\nparsing reference %s", imageName)
-		return "", err
+		return "", errors.Wrap(err, "parsing image reference")
 	}
 
 	img, err := remote.Image(ref)
 	if err != nil {
 		fmt.Printf("\nerror getting image %q", ref.Name())
-		return "", err
+		return "", errors.Wrap(err, "getting remote image")
 	}
 
 	rootDir, err = generateImageFileSystem(buildContextDir, img, ref)
 	if err != nil {
 		fmt.Printf("\nerror from getImageFileSystem(): %s", err.Error())
-		return "", err
+		return "", errors.Wrap(err, "creating image fifle system")
 	}
-
-	fmt.Printf("\ndirectory for image %q is: %s", imageName, rootDir)
 	return rootDir, nil
 }
 
@@ -71,28 +68,29 @@ func generateImageFileSystem(unpackdir string, img v1.Image, ref name.Reference)
 	tarfile := path.Join(unpackdir, "image.tar")
 	if err := tarball.WriteToFile(tarfile, ref, img); err != nil {
 		fmt.Printf("\nerror writing image to %q", tarfile)
-		return "", err
+		return "", errors.Wrap(err, "writing image to file system")
 	}
 	fmt.Printf("\nwrote image to %q", tarfile)
 
 	unpackDirRootfs := path.Join(unpackdir, "rootfs")
 	os.MkdirAll(unpackDirRootfs, 0744)
 	if err := untar(tarfile, unpackDirRootfs); err != nil {
-		fmt.Printf("\nerror unpack %q to file system %q", tarfile, unpackDirRootfs)
-		return unpackDirRootfs, err
+		fmt.Printf("\nerror unpack %s to file system %s", tarfile, unpackDirRootfs)
+		return unpackDirRootfs, errors.Wrap(err, "unpacking image tarball")
 	}
 
 	manifest, err := getManifest(path.Join(unpackDirRootfs, "manifest.json"))
 	if err != nil {
-		fmt.Printf("\nerror untar image %q: %s", tarfile, err.Error())
-		return "", err
+		fmt.Printf("\nerror retrieving image manifest.json: %s", err.Error())
+		return "", errors.Wrap(err, "reading image manifest.json")
 	}
+
 	for _, file := range manifest.LayerFiles { //untar the tar.gz file for each layer
 		filepath := path.Join(unpackDirRootfs, file)
 		err = untar(filepath, unpackDirRootfs)
 		if err != nil {
 			fmt.Printf("\nerror untar image layer %q: %s", file, err.Error())
-			return "", err
+			return "", errors.Wrapf(err, "untaring image layer %s", file)
 		}
 	}
 	return unpackDirRootfs, nil
@@ -216,19 +214,18 @@ func getImageReferences(imageName string) ([]struct {
 
 //untar .tar or .tar.gz file into target directory
 func untar(tarball, target string) error {
-	fmt.Printf("\nuntar1 %q to %s", tarball, target)
+	fmt.Printf("\nuntar %q to %s", tarball, target)
 	file, err := os.Open(tarball)
 	if err != nil {
-		fmt.Printf("\nerror1 in untar1 %s", err.Error())
-		return err
+		return errors.Wrap(err, "opening tarball")
 	}
 	defer file.Close()
+	defer os.Remove(tarball)
 
 	var fileReader io.ReadCloser = file
 	if strings.HasSuffix(tarball, ".gz") {
 		if fileReader, err = gzip.NewReader(file); err != nil {
-			fmt.Printf("\nerror2 in untar1 %s", err.Error())
-			return err
+			return errors.Wrap(err, "creating gzip reader")
 		}
 		defer fileReader.Close()
 	}
@@ -239,31 +236,26 @@ func untar(tarball, target string) error {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			fmt.Printf("\nerror3 in untar1 %s", err.Error())
-			return err
+			return errors.Wrap(err, "creating tar reader")
 		}
 
 		path := path.Join(target, header.Name)
 		info := header.FileInfo()
 		if info.IsDir() {
 			if err = os.MkdirAll(path, info.Mode()); err != nil {
-				fmt.Printf("\nerror4 in untar1 %s", err.Error())
-				return err
+				return errors.Wrap(err, "creating directory")
 			}
 			continue
 		}
 		file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
 		if err != nil {
-			fmt.Printf("\nerror5 in untar1 %s", err.Error())
-			return err
+			return errors.Wrap(err, "creating a file")
 		}
 
 		_, err = io.Copy(file, tarReader)
 		if err != nil {
-			fmt.Printf("\nerror6 in untar1 %s", err.Error())
-			return err
+			return errors.Wrap(err, "copying from tarball to file")
 		}
-		file.Close()
 	}
 	return nil
 }
@@ -274,11 +266,11 @@ func getManifest(filename string) (spdx.ArchiveManifest, error) {
 
 	manifestJSON, err := os.ReadFile(filename)
 	if err != nil {
-		return spdx.ArchiveManifest{}, errors.New(fmt.Sprintf("unable to read manifest file %q: %s", filename, err.Error()))
+		return spdx.ArchiveManifest{}, errors.Wrap(err, "reading image manifest file")
 	}
 	if err := json.Unmarshal(manifestJSON, &manifestData); err != nil {
 		fmt.Println(string(manifestJSON))
-		return spdx.ArchiveManifest{}, errors.New(fmt.Sprintf("error unmarshalling manifest file %q: %s", filename, err.Error()))
+		return spdx.ArchiveManifest{}, errors.Wrap(err, "unmarshalling image manifest%q: %s")
 	}
 	return manifestData[0], nil
 }
