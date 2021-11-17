@@ -82,5 +82,6 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 		filename = fmt.Sprintf("%s.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatSpdx)
 	}
 	common.SaveFile(filename, []byte(spdxReport))
+	fmt.Printf("\nclean up temporary files ...\n")
 	return nil
 }
