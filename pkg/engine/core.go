@@ -24,6 +24,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/tap8stry/orion/pkg/common"
 	"github.com/tap8stry/orion/pkg/parser/addon"
 	"github.com/tap8stry/orion/pkg/parser/dockerfile"
@@ -34,9 +35,9 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 	//get Dockerfile
 	dfile, err := dockerfile.GetDockerfile(dopts.DockerfilePath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "reading dockerfile")
 	}
-	fmt.Printf("\n got dockerfile = %s", dfile.Filepath)
+	fmt.Printf("\ngot dockerfile %q", dfile.Filepath)
 
 	var spdxReport string
 
@@ -58,19 +59,22 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 
 	//verify and produce SPDX if image provided
 	if len(dopts.Image) > 0 {
-		fmt.Printf("\nget image %q for dockerfile %q", dopts.Image, dfile.Filepath)
+		fmt.Printf("\nget image %q for dockerfile %q\n", dopts.Image, dfile.Filepath)
 		buildContextDir, err := ioutil.TempDir(os.TempDir(), "build-ctx")
 		if err != nil {
 			fmt.Printf("\nerror creating build context dir: %s", err.Error())
-			return err
+			return errors.Wrap(err, "creating build directory")
 		}
 		defer os.RemoveAll(buildContextDir)
 		artifacts, err := addon.VerifyAddOnInstalls(buildContextDir, dopts.Image, &dfile.BuildStages[len(dfile.BuildStages)-1])
 		if err != nil {
 			fmt.Printf("\nerror verifying addon installs: %s", err.Error())
-			return err
+			return errors.Wrap(err, "verifying add-ons against image")
 		}
 		spdxReport, err = addon.GenerateSpdxReport(dfile.Filepath, dopts.Image, dopts.Namespace, artifacts)
+		if err != nil {
+			return errors.Wrap(err, "generating spdx report")
+		}
 	}
 	//save spdx report
 	filename = fmt.Sprintf("%s.%s", common.DefaultFilename, common.FormatSpdx)
@@ -78,5 +82,6 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 		filename = fmt.Sprintf("%s.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatSpdx)
 	}
 	common.SaveFile(filename, []byte(spdxReport))
+	fmt.Printf("\nclean up temporary files ...\n")
 	return nil
 }

@@ -43,13 +43,13 @@ const (
 func GetDockerfileReader(filepath string) (*parser.Result, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
-		fmt.Printf("\nError opening dockerfile: %v", err)
+		fmt.Printf("\nerror opening dockerfile: %s", err.Error())
 		return nil, err
 	}
 
 	res, err := parser.Parse(file)
 	if err != nil {
-		fmt.Printf("\nError parsing dockerfile: %v", err)
+		fmt.Printf("\nerror parsing dockerfile: %s", err.Error())
 		return nil, err
 	}
 
@@ -62,7 +62,7 @@ func GetDockerfile(f string) (common.Dockerfile, error) {
 	cm.Filepath = f
 	data, err := ioutil.ReadFile(f)
 	if err != nil {
-		fmt.Printf("\nerring reading dockerfile %q: %s", f, err.Error())
+		fmt.Printf("\nerror reading dockerfile %q: %s", f, err.Error())
 		return cm, err
 	}
 	cm.Filehash = fmt.Sprintf("%x", sha3.Sum256(data))

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/tap8stry/orion/pkg/common"
 	"k8s.io/release/pkg/spdx"
 )
@@ -73,7 +74,7 @@ func GenerateSpdxReport(dockerfilename, image, namespace string, artifacts []com
 	markup, err := doc.Render()
 	if err != nil {
 		fmt.Printf("\nerror in rendering SPDX document: %s", err.Error())
-		return "", err
+		return "", errors.Wrap(err, "rendering SPDX document")
 	}
 	return markup, nil
 }

@@ -20,12 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/tap8stry/orion/pkg/common"
-	"github.com/tap8stry/orion/pkg/dind"
+	"github.com/tap8stry/orion/pkg/imagefs"
 	"golang.org/x/mod/sumdb/dirhash"
 )
 
@@ -52,48 +51,14 @@ func VerifyAddOnInstalls(buildContextDir, image string, buildStage *common.Build
 		return nil, nil
 	}
 
-	fsdir, err := getImageFs(image, buildContextDir)
+	fsdir, err := imagefs.Get(image, buildContextDir)
 	if err != nil {
 		fmt.Printf("\nerror in creating image filesystem: %s\n", err.Error())
 		return nil, err
 	}
-	fmt.Printf("\nverify, image-fsdir=%s", fsdir)
+	fmt.Printf("\nverify against image's filesystem at %q", fsdir)
 	verified := verifyArtifacts(buildStage.AddOnInstalls, fsdir)
 	return verified, nil
-}
-
-//getImageFs returns the file system from image build for the input dockerfile data
-func getImageFs(image, buildContextDir string) (string, error) {
-
-	/*	imageName := strings.ToLower(randomdata.SillyName())
-		//build docker image
-		if err := dind.BuildImage(repodir, pDfp, imageName); err != nil {
-			fmt.Printf("\nerror running dind build: %v", err)
-			return "", errors.New("unable to build Docker image")
-		}
-	*/
-	//create a docker container of the image
-	containerID, err := dind.CreateContainer(image)
-	if err != nil {
-		fmt.Printf("\nerror creatting container: %v", err)
-		return "", errors.New("unable to run Dokcer container")
-	}
-
-	//export the container and untar it to the filesystem
-	unpackDirRootfs := path.Join(buildContextDir, "rootfs")
-	os.MkdirAll(unpackDirRootfs, 0744)
-	tarfilePath := path.Join(buildContextDir, fmt.Sprintf("%s.tar.gz", image[strings.LastIndex(image, "/")+1:strings.LastIndex(image, ":")]))
-	fmt.Printf("\nexport image to file system: %s", tarfilePath)
-	if err := dind.ExportImageToLocalDir(tarfilePath, containerID); err != nil {
-		fmt.Printf("\nerror running dind export: %v", err)
-		return "", errors.New("unable to export Docker image")
-	}
-	fmt.Printf("\nuntar image file to: %s", unpackDirRootfs)
-	if err := dind.UntarImageToLocalDir(tarfilePath, unpackDirRootfs); err != nil {
-		fmt.Printf("\nerror running untar: %v", err)
-		return "", errors.New("unable to extract Docker image locally")
-	}
-	return unpackDirRootfs, nil
 }
 
 func verifyArtifacts(installs []common.InstallTrace, fsdir string) []common.VerifiedArtifact {
@@ -130,7 +95,7 @@ func verifyArtifacts(installs []common.InstallTrace, fsdir string) []common.Veri
 func getPath(trace common.Trace, dir string) (string, bool, error) {
 	var err error
 	des := trace.Destination
-	switch trace.Command {
+	switch strings.Fields(trace.Command)[0] {
 	case "COPY":
 		des = checkCOPYADDDestination(trace)
 	case "ADD":
@@ -145,16 +110,19 @@ func getPath(trace common.Trace, dir string) (string, bool, error) {
 		if err != nil {
 			return des, false, err
 		}
+	case "tar": //TODO: investigate how to determin the destination from 'tar -x'
+		fmt.Printf("\ndestination unknown, skip the trace for %s, ", trace.Command)
+		return des, false, errors.New("destination unknown, need manual review")
 	default: //do nothing
 	}
 
-	//des = dir + des
 	info, err := os.Stat(dir + des)
 	if os.IsNotExist(err) {
 		fmt.Printf("\nfolder/file %s does not exist for verifying", dir+trace.Destination)
 		return "", false, err
 	}
 	if strings.EqualFold(des, "/") || len(des) == 0 { // root directory
+		fmt.Printf("\ndestination unknown")
 		return des, info.IsDir(), errors.New("destination unknown")
 	}
 	if info.IsDir() {
@@ -169,12 +137,18 @@ func getPath(trace common.Trace, dir string) (string, bool, error) {
 
 func checkCOPYADDDestination(trace common.Trace) string {
 	des := trace.Destination
+	so := trace.Source
+
+	if strings.HasSuffix(so, "/") {
+		so = so[:len(so)-1]
+	}
+	so = so[strings.LastIndex(so, "/")+1:]
+
 	if strings.HasSuffix(des, "/") { //des is a directory
-		if !strings.HasSuffix(trace.Source, "/") { //source is a file
-			sostrs := strings.Split(trace.Source, "/")
-			so := sostrs[len(sostrs)-1] //get source filename
-			des += so
-		}
+		des += so
+	}
+	if strings.HasSuffix(des, "/.") {
+		des = des[:len(des)-1] + so
 	}
 	return des
 }
@@ -185,8 +159,7 @@ func checkCpDestination(trace common.Trace, dir string) (string, error) {
 	des = strings.TrimSuffix(des, "/") //e.g. /usr/bin/ --> /usr/bin
 	info, err := os.Stat(dir + des)    // e.g. /tmp/build-ctx00032/rootfs/usr/bin
 	if os.IsNotExist(err) {
-		fmt.Printf("\nfolder/file %s does not exist", dir+des)
-		return "", err
+		return "", fmt.Errorf("\nfolder/file %s does not exist", dir+des)
 	}
 	if info.IsDir() { // destination is a directory
 		sostrs := strings.Split(trace.Source, "/")

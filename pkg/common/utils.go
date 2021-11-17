@@ -54,7 +54,7 @@ func SaveFile(filename string, data []byte) {
 	if len(data) > 0 {
 		err := ioutil.WriteFile(filename, data, 0644)
 		if err != nil {
-			fmt.Printf("\nerror writing data to %q", filename)
+			fmt.Printf("\nerror writing data to %q: %s", filename, err.Error())
 			return
 		}
 		fmt.Printf("\nresults saved to: %q", filename)
