@@ -17,6 +17,7 @@
 package addon
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/tap8stry/orion/pkg/common"
@@ -27,12 +28,15 @@ const (
 	CURL        = "curl"
 	WGET        = "wget"
 	TAR         = "tar"
+	UNZIP       = "unzip"
 	CP          = "cp"
 	MV          = "mv"
 	CD          = "cd"
 	GIT         = "git"
 	GITCLONE    = "git clone"
 	GITCHECKOUT = "git checkout"
+	COPY        = "COPY"
+	ADD         = "ADD"
 )
 
 // DiscoverAddonArtifacts returns a list of artifaces installed by RUN curl/wget commands
@@ -127,6 +131,13 @@ func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string)
 				trace := processTar(args, currentdir, stageargs)
 				if len(trace.Source) > 0 && existInInstallTrace(m, trace.Source) {
 					m[j] = trace
+					j++
+				}
+			case UNZIP:
+				trace := processUnzip(args, currentdir, stageargs)
+				if len(trace.Source) > 0 && existInInstallTrace(m, trace.Source) {
+					m[j] = trace
+					fmt.Printf("\n j=%d, trace=%v", j, trace)
 					j++
 				}
 			case CP:

@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
@@ -96,21 +97,24 @@ func getPath(trace common.Trace, dir string) (string, bool, error) {
 	var err error
 	des := trace.Destination
 	switch strings.Fields(trace.Command)[0] {
-	case "COPY":
+	case COPY:
 		des = checkCOPYADDDestination(trace)
-	case "ADD":
+	case ADD:
 		des = checkCOPYADDDestination(trace)
-	case "cp":
+	case CP:
 		des, err = checkCpDestination(trace, dir)
 		if err != nil {
 			return des, false, err
 		}
-	case "mv":
+	case MV:
 		des, err = checkMvDestination(trace, dir)
 		if err != nil {
 			return des, false, err
 		}
-	case "tar": //TODO: investigate how to determin the destination from 'tar -x'
+	case TAR: //TODO: investigate how to determin the destination from 'tar -x'
+		fmt.Printf("\ndestination unknown, skip the trace for %s, ", trace.Command)
+		return des, false, errors.New("destination unknown, need manual review")
+	case UNZIP: //TODO: investigate how to determin the destination from 'unzip'
 		fmt.Printf("\ndestination unknown, skip the trace for %s, ", trace.Command)
 		return des, false, errors.New("destination unknown, need manual review")
 	default: //do nothing
@@ -118,7 +122,7 @@ func getPath(trace common.Trace, dir string) (string, bool, error) {
 
 	info, err := os.Stat(dir + des)
 	if os.IsNotExist(err) {
-		fmt.Printf("\nfolder/file %s does not exist for verifying", dir+trace.Destination)
+		fmt.Printf("\nfolder/file %s does not exist for verifying", dir+des)
 		return "", false, err
 	}
 	if strings.EqualFold(des, "/") || len(des) == 0 { // root directory
@@ -128,7 +132,7 @@ func getPath(trace common.Trace, dir string) (string, bool, error) {
 	if info.IsDir() {
 		_, err = dirhash.HashDir(dir+des, "", dirhash.DefaultHash) //
 		if err != nil {
-			fmt.Printf("\nsha for folder %s cannot be calculated", dir+trace.Destination)
+			fmt.Printf("\nsha for folder %s cannot be calculated", dir+des)
 			return dir + des, info.IsDir(), err
 		}
 	}
@@ -154,18 +158,23 @@ func checkCOPYADDDestination(trace common.Trace) string {
 }
 
 func checkCpDestination(trace common.Trace, dir string) (string, error) {
-	des := trace.Destination
+	des := strings.TrimSpace(trace.Destination)
 	des = strings.TrimSuffix(des, ".") //e.g. /usr/bin/. --> /usr/bin/
 	des = strings.TrimSuffix(des, "/") //e.g. /usr/bin/ --> /usr/bin
-	info, err := os.Stat(dir + des)    // e.g. /tmp/build-ctx00032/rootfs/usr/bin
+	despath := path.Join(dir, des)
+	info, err := os.Stat(despath) // e.g. /tmp/build-ctx00032/rootfs/usr/bin
 	if os.IsNotExist(err) {
+		fmt.Printf("\nfolder/file %s does not exist: %s", despath, err.Error())
 		return "", fmt.Errorf("\nfolder/file %s does not exist", dir+des)
 	}
 	if info.IsDir() { // destination is a directory
 		sostrs := strings.Split(trace.Source, "/")
 		so := sostrs[len(sostrs)-1]
-		des += "/" + so
+		if !strings.EqualFold(so, "*") { //do not add the widecard if used in source path, e.g. trace.Source="/gradle-*/*"
+			des += "/" + so
+		}
 	}
+	fmt.Printf("\n---- des = %s", des)
 	return des, nil
 }
 
