@@ -65,8 +65,14 @@ func isOsInstall(cmd string) bool {
 // existInInstallTrace checks if the source is in a destination of previous steps, therefore belongs to the same curl/wget installation
 func existInInstallTrace(traces map[int]common.Trace, source string) bool {
 	for i := 0; i < len(traces); i++ {
-		if strings.HasPrefix(source, traces[i].Destination) {
-			return true
+		if strings.Contains(source, "*") { // source = "gradle-*.zip"
+			if strings.Contains(traces[i].Destination, source[:strings.Index(source, "*")]) {
+				return true
+			}
+		} else {
+			if strings.HasPrefix(source, traces[i].Destination) {
+				return true
+			}
 		}
 	}
 	return false

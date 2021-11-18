@@ -17,6 +17,7 @@
 package addon
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -163,6 +164,43 @@ func processTar(args []string, workdir string, stageargs map[string]string) comm
 			continue
 		}
 	}
+	return trace
+}
+
+// processZip parses zip command
+func processUnzip(args []string, workdir string, stageargs map[string]string) common.Trace {
+	trace := common.Trace{
+		Command:     UNZIP,
+		Source:      "",
+		Destination: workdir,
+		Workdir:     workdir,
+	}
+	fmt.Printf("\n unzip args = %v", args)
+	/* 	unzip [-Z] [-opts[modifiers]] file[.zip] [list] [-x xlist] [-d exdir]
+	   	unzip latest.zip
+		unzip filename.zip -d /path/to/directory
+		unzip filename.zip -x file1-to-exclude file2-to-exclude
+		unzip -P PasswOrd filename.zip  */
+	for j := 1; j < len(args); j++ { //skip "unzip", e.g unzip gradle-*.zip
+		if strings.HasPrefix(args[j], "-d") && len(args) > j+1 {
+			trace.Destination = replaceArgEnvVariable(args[j+1], stageargs)
+			j++
+			continue
+		}
+		if strings.HasPrefix(args[j], "-P") && len(args) > j+1 { //unzip -P <password> file.zip
+			j++
+			continue
+		}
+		if !strings.HasPrefix(args[j], "-") && len(trace.Source) == 0 {
+			trace.Source = replaceArgEnvVariable(args[j], stageargs)
+			if !strings.HasPrefix(trace.Source, "/") {
+				trace.Source = strings.TrimSuffix(workdir, "/") + "/" + trace.Source
+			}
+			continue
+		}
+	}
+	b, _ := json.Marshal(trace)
+	fmt.Printf("\n unzip trace = %s", string(b))
 	return trace
 }
 
