@@ -17,7 +17,6 @@
 package addon
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/tap8stry/orion/pkg/common"
@@ -137,7 +136,6 @@ func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string)
 				trace := processUnzip(args, currentdir, stageargs)
 				if len(trace.Source) > 0 && existInInstallTrace(m, trace.Source) {
 					m[j] = trace
-					fmt.Printf("\n j=%d, trace=%v", j, trace)
 					j++
 				}
 			case CP:
