@@ -119,14 +119,6 @@ type InstallTrace struct {
 	Traces     map[int]Trace `json:"traces,omitempty"`
 }
 
-//Artifact presents a resource
-type Artifact struct {
-	Source   string `json:"source,omitempty"`
-	Filepath string `json:"filepath,omitempty"`
-	Filehash string `json:"filehash,omitempty"`
-	IsDir    bool   `json:"isDir"`
-}
-
 //CommandSet is a set of commands in their execution order
 type CommandSet struct {
 	Commands map[int]string
@@ -145,12 +137,17 @@ type SpdxFile struct {
 	FileComment          string `json:"fileComment,omitempty"`
 }
 
+//Artifact presents a resource
+type Artifact struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Version     string `json:"version,omitempty"`
+	IsDirectory bool   `json:"isDirectory"`
+}
+
 type VerifiedArtifact struct {
-	Name             string `json:"name"`
-	Path             string `json:"path"`
-	Version          string `json:"version,omitempty"`
-	IsDirectory      bool   `json:"isDirectory"`
-	IsDownload       bool   `json:"isDownload"`
-	DownloadLocation string `json:"downloadLocation"`
-	Comment          string `json:"packageComment,omitempty"`
+	IsDownload       bool       `json:"isDownload"`
+	DownloadLocation string     `json:"downloadLocation"`
+	Comment          string     `json:"packageComment,omitempty"`
+	Artifacts        []Artifact `json:"artifacts,omitempty"`
 }

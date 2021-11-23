@@ -25,52 +25,76 @@ import (
 	"k8s.io/release/pkg/spdx"
 )
 
-func GenerateSpdxReport(dockerfilename, image, namespace string, artifacts []common.VerifiedArtifact) (string, error) {
+func GenerateSpdxReport(dockerfilename, image, namespace string, installs []common.VerifiedArtifact) (string, error) {
 	doc := spdx.NewDocument()
 	doc.Name = "SPDX-Docker-Image-Addons-" + image
+	doc.ID = "SPDXRef-DOCUMENT-FOR-ADDONS"
 	doc.Namespace = namespace
 	doc.Creator.Person = "Tester Tester"
 	doc.Creator.Tool = []string{"https://github.ibm.com/tapestry/tapestry-discover", "k8s.io/release/pkg/spdx"}
 	fmt.Printf("\ncreate a new SPDX doc %q, namespace=%q", doc.Name, doc.Namespace)
 
-	for _, art := range artifacts {
-		if art.IsDirectory {
-			myspdx := spdx.NewSPDX()
-			pkg, err := myspdx.PackageFromDirectory(art.Path)
-			if err != nil {
-				fmt.Printf("\n\nerror creating package for directory %s, error = %s", art.Path, err.Error())
+	for _, ins := range installs {
+		if ins.IsDownload { //create a Package, add the download file to package, add package to document
+			dpkg := spdx.NewPackage()
+			name := ins.DownloadLocation[strings.LastIndex(ins.DownloadLocation, "://")+3:]
+			dpkg.Name = name
+			dpkg.ID = "SPDXRef-Package-" + name
+			dpkg.FileName = name
+			dpkg.DownloadLocation = ins.DownloadLocation
+
+			for _, art := range ins.Artifacts {
+				if art.IsDirectory {
+					myspdx := spdx.NewSPDX()
+					pkg, err := myspdx.PackageFromDirectory(art.Path)
+					if err != nil {
+						fmt.Printf("\n\nerror creating package for directory %s, error = %s", art.Path, err.Error())
+					}
+					pkg.FileName = art.Path[strings.Index(art.Path, "rootfs/")+7:]
+					pkg.DownloadLocation = dpkg.DownloadLocation
+					if err := dpkg.AddPackage(pkg); err != nil {
+						fmt.Printf("\n\nerror in adding a directory to download package: %s", err.Error())
+					}
+				} else {
+					f := spdx.NewFile()
+					name := art.Name[strings.LastIndex(art.Name, "rootfs/")+7:]
+					f.FileName = name
+					f.SourceFile = art.Path
+					f.Name = name
+					if err := dpkg.AddFile(f); err != nil {
+						fmt.Printf("\n\nerror in adding a file to download package: %s", err.Error())
+					}
+				}
 			}
-			pkg.DownloadLocation = art.DownloadLocation
-			pkg.FileName = art.Path[strings.Index(art.Path, "rootfs/")+7:]
-			if err := doc.AddPackage(pkg); err != nil {
+			if err := doc.AddPackage(dpkg); err != nil {
 				fmt.Printf("\n\nerror in adding package to document: %s", err.Error())
 			}
 		} else {
-			f := spdx.NewFile()
-			name := art.Name[strings.LastIndex(art.Name, "rootfs/")+7:]
-			f.FileName = name
-			f.SourceFile = art.Path
-			f.Name = name
-
-			if art.IsDownload { //create a Package, add the download file to package, add package to document
-				pkg := spdx.NewPackage()
-				pkg.Name = name[strings.LastIndex(name, "/")+1:]
-				pkg.ID = "SPDXRef-Package-" + name
-				pkg.DownloadLocation = art.DownloadLocation
-				pkg.FileName = name
-				if err := pkg.AddFile(f); err != nil {
-					fmt.Printf("\nerror in adding file to package: %s", err.Error())
-				}
-				if err := doc.AddPackage(pkg); err != nil {
-					fmt.Printf("\nerror in adding package to document: %s", err.Error())
-				}
-			} else { //add file to document
-				if err := doc.AddFile(f); err != nil {
-					fmt.Printf("\nerror in adding file to document: %s", err.Error())
+			for _, art := range ins.Artifacts {
+				if art.IsDirectory {
+					myspdx := spdx.NewSPDX()
+					pkg, err := myspdx.PackageFromDirectory(art.Path)
+					if err != nil {
+						fmt.Printf("\n\nerror creating package for directory %s, error = %s", art.Path, err.Error())
+					}
+					pkg.FileName = art.Path[strings.Index(art.Path, "rootfs/")+7:]
+					if err := doc.AddPackage(pkg); err != nil {
+						fmt.Printf("\n\nerror in adding a directory to download package: %s", err.Error())
+					}
+				} else {
+					f := spdx.NewFile()
+					name := art.Name[strings.LastIndex(art.Name, "rootfs/")+7:]
+					f.FileName = name
+					f.SourceFile = art.Path
+					f.Name = name
+					if err := doc.AddFile(f); err != nil {
+						fmt.Printf("\n\nerror in adding a file to download package: %s", err.Error())
+					}
 				}
 			}
 		}
 	}
+
 	markup, err := doc.Render()
 	if err != nil {
 		fmt.Printf("\nerror in rendering SPDX document: %s", err.Error())

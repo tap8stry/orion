@@ -17,7 +17,6 @@
 package addon
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -175,7 +174,7 @@ func processUnzip(args []string, workdir string, stageargs map[string]string) co
 		Destination: workdir,
 		Workdir:     workdir,
 	}
-	fmt.Printf("\n unzip args = %v", args)
+
 	/* 	unzip [-Z] [-opts[modifiers]] file[.zip] [list] [-x xlist] [-d exdir]
 	   	unzip latest.zip
 		unzip filename.zip -d /path/to/directory
@@ -199,8 +198,6 @@ func processUnzip(args []string, workdir string, stageargs map[string]string) co
 			continue
 		}
 	}
-	b, _ := json.Marshal(trace)
-	fmt.Printf("\n unzip trace = %s", string(b))
 	return trace
 }
 

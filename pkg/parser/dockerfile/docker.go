@@ -42,6 +42,7 @@ const (
 //GetDockerfileReader reads a file into Dockerfile parser
 func GetDockerfileReader(filepath string) (*parser.Result, error) {
 	file, err := os.Open(filepath)
+	defer file.Close()
 	if err != nil {
 		fmt.Printf("\nerror opening dockerfile: %s", err.Error())
 		return nil, err

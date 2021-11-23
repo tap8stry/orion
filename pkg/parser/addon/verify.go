@@ -63,34 +63,39 @@ func VerifyAddOnInstalls(buildContextDir, image string, buildStage *common.Build
 }
 
 func verifyArtifacts(installs []common.InstallTrace, fsdir string) []common.VerifiedArtifact {
-	artifacts := []common.VerifiedArtifact{}
+	verifiedInstalls := []common.VerifiedArtifact{}
 	for _, install := range installs {
-		isDownload := false
+		verified := common.VerifiedArtifact{
+			IsDownload:       false,
+			DownloadLocation: install.Origin,
+			Comment:          "",
+			Artifacts:        []common.Artifact{},
+		}
+
 		for _, trace := range install.Traces {
 			if strings.EqualFold(trace.Command, CURL) ||
 				strings.EqualFold(trace.Command, WGET) ||
 				strings.EqualFold(trace.Command, GIT) ||
 				strings.EqualFold(trace.Command, GITCHECKOUT) ||
 				strings.EqualFold(trace.Command, GITCLONE) {
-				isDownload = true
+				verified.IsDownload = true
 			}
 			path, isdir, err := getPath(trace, fsdir)
 			if err != nil { //skip
 				continue
 			}
-			art := common.VerifiedArtifact{
-				Name:             path,
-				Path:             path,
-				Version:          "",
-				IsDirectory:      isdir,
-				IsDownload:       isDownload,
-				DownloadLocation: install.Origin,
+			art := common.Artifact{
+				Name:        path,
+				Path:        path,
+				Version:     "",
+				IsDirectory: isdir,
 			}
-			artifacts = append(artifacts, art)
+			verified.Artifacts = append(verified.Artifacts, art)
 		}
+		verifiedInstalls = append(verifiedInstalls, verified)
 	}
-	fmt.Printf("\n# of verified artifacts = %d", len(artifacts))
-	return artifacts
+	fmt.Printf("\n# of verified artifacts = %d", len(verifiedInstalls))
+	return verifiedInstalls
 }
 
 func getPath(trace common.Trace, dir string) (string, bool, error) {
@@ -126,8 +131,8 @@ func getPath(trace common.Trace, dir string) (string, bool, error) {
 		return "", false, err
 	}
 	if strings.EqualFold(des, "/") || len(des) == 0 { // root directory
-		fmt.Printf("\ndestination unknown")
-		return des, info.IsDir(), errors.New("destination unknown")
+		fmt.Printf("\ndestination invalid, root directory %s found as destination", des)
+		return des, info.IsDir(), errors.New("destination invalid")
 	}
 	if info.IsDir() {
 		_, err = dirhash.HashDir(dir+des, "", dirhash.DefaultHash) //
@@ -174,7 +179,6 @@ func checkCpDestination(trace common.Trace, dir string) (string, error) {
 			des += "/" + so
 		}
 	}
-	fmt.Printf("\n---- des = %s", des)
 	return des, nil
 }
 
