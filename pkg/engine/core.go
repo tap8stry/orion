@@ -52,7 +52,11 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 	//save traces
 	filename := fmt.Sprintf("%s-trace.%s", common.DefaultFilename, common.FormatJSON)
 	if len(dopts.OutFilepath) > 0 {
-		filename = fmt.Sprintf("%s-trace.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatJSON)
+		if strings.LastIndex(dopts.OutFilepath, ".") > 0 {
+			filename = fmt.Sprintf("%s-trace.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatJSON)
+		} else {
+			filename = fmt.Sprintf("%s-trace.%s", dopts.OutFilepath, common.FormatJSON)
+		}
 	}
 	data, _ := json.MarshalIndent(dfile, "", "  ")
 	common.SaveFile(filename, data)
@@ -79,7 +83,12 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 	//save spdx report
 	filename = fmt.Sprintf("%s.%s", common.DefaultFilename, common.FormatSpdx)
 	if len(dopts.OutFilepath) > 0 {
-		filename = fmt.Sprintf("%s.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatSpdx)
+		if strings.LastIndex(dopts.OutFilepath, ".") > 0 {
+			filename = fmt.Sprintf("%s.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatSpdx)
+		} else {
+			filename = fmt.Sprintf("%s.%s", dopts.OutFilepath, common.FormatSpdx)
+		}
+
 	}
 	common.SaveFile(filename, []byte(spdxReport))
 	fmt.Printf("\nclean up temporary files ...\n")

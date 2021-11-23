@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
@@ -54,7 +55,7 @@ EXAMPLES
 				DockerfilePath: *dockerfile,
 				Image:          *image,
 				Namespace:      *namespace,
-				OutFilepath:    *outputfp,
+				OutFilepath:    strings.TrimSpace(*outputfp),
 				Format:         *format,
 			}
 
