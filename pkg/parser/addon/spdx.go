@@ -31,7 +31,7 @@ func GenerateSpdxReport(dockerfilename, image, namespace string, installs []comm
 	doc.ID = "SPDXRef-DOCUMENT-FOR-ADDONS"
 	doc.Namespace = namespace
 	doc.Creator.Person = "Tester Tester"
-	doc.Creator.Tool = []string{"https://github.ibm.com/tapestry/tapestry-discover", "k8s.io/release/pkg/spdx"}
+	doc.Creator.Tool = []string{"https://github.com/tap8stry/orion", "k8s.io/release/pkg/spdx"}
 	fmt.Printf("\ncreate a new SPDX doc %q, namespace=%q", doc.Name, doc.Namespace)
 
 	for _, ins := range installs {
