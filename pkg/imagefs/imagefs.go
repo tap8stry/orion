@@ -216,18 +216,18 @@ func getImageReferences(imageName string) ([]struct {
 func untar(tarball, target string) error {
 	fmt.Printf("\nuntar %q to %s", tarball, target)
 	file, err := os.Open(tarball)
+	defer file.Close()
 	if err != nil {
 		return errors.Wrap(err, "opening tarball")
 	}
-	defer file.Close()
 	defer os.Remove(tarball)
 
 	var fileReader io.ReadCloser = file
+	defer fileReader.Close()
 	if strings.HasSuffix(tarball, ".gz") {
 		if fileReader, err = gzip.NewReader(file); err != nil {
 			return errors.Wrap(err, "creating gzip reader")
 		}
-		defer fileReader.Close()
 	}
 
 	tarReader := tar.NewReader(fileReader)
@@ -248,6 +248,7 @@ func untar(tarball, target string) error {
 			continue
 		}
 		file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
+		defer file.Close()
 		if err != nil {
 			return errors.Wrap(err, "creating a file")
 		}
