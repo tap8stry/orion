@@ -20,6 +20,7 @@ There are many ways that developers can compose their Dockerfile to install addi
     - curl
     - wget
     - tar -x...
+    - unzip
     - git clone, git checkout
     - cp
     - mv 
@@ -43,7 +44,7 @@ There are many ways that developers can compose their Dockerfile to install addi
 2. Command to scan Dockefile and produce addon installation traces
 
 ```
-% ./orion discover -d <dockerfile-path> -n <sbom-namespace> -f <output-file-path>
+% ./orion discover -f <dockerfile-path> -n <sbom-namespace> -r <output-file-path>
 ```
 
 where 
@@ -54,7 +55,7 @@ where
 3. Command to produce/verify addon installation traces and produce SBOM report
 
 ```
-% ./orion discover -d <dockerfile-path> -n <sbom-namespace> -i <image-name:tag> -f <output-file-path>
+% ./orion discover -f <dockerfile-path> -n <sbom-namespace> -i <image-name:tag> -r <output-file-path>
 ```
 The SBOM report is saved to `<output-filepath>.spdx`.
 

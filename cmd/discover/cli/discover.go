@@ -33,20 +33,20 @@ import (
 func Discover() *ffcli.Command {
 	var (
 		flagset    = flag.NewFlagSet("discover", flag.ExitOnError)
-		dockerfile = flagset.String("d", "", "dockerfile pathname")
+		dockerfile = flagset.String("f", "", "dockerfile pathname")
 		image      = flagset.String("i", "", "image name:tag")
 		namespace  = flagset.String("n", "", "SBOM namespace")
-		outputfp   = flagset.String("f", "", "output file path, default: ./result.spdx")
+		outputfp   = flagset.String("r", "", "output file path, default: ./result.spdx")
 		format     = flagset.String("o", "", "output format (json, spdx) default: spdx")
 	)
 	return &ffcli.Command{
 		Name:       "discover",
-		ShortUsage: "orion discover -d <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -f <output filepath> -o <format>",
+		ShortUsage: "orion discover -f <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -r <output filepath> -o <format>",
 		ShortHelp:  `Discover software dependencies`,
 		LongHelp: `Discover software dependencies not managed by package managers
 EXAMPLES
   # discover all dependencies not managed by package managers
-  orion discover -d ./Dockerfile -i binderancient:latest -n https://github.com/myorg/myproject -f result.spdx -o spdx
+  orion discover -f ./Dockerfile -i binderancient:latest -n https://github.com/myorg/myproject -r result.spdx -o spdx
 `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
