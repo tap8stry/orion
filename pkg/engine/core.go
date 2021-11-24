@@ -31,7 +31,7 @@ import (
 )
 
 //StartDiscovery : entrypoint for discovery core function
-func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
+func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion string) error {
 	//get Dockerfile
 	dfile, err := dockerfile.GetDockerfile(dopts.DockerfilePath)
 	if err != nil {
@@ -75,7 +75,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 			fmt.Printf("\nerror verifying addon installs: %s", err.Error())
 			return errors.Wrap(err, "verifying add-ons against image")
 		}
-		spdxReport, err = addon.GenerateSpdxReport(dfile.Filepath, dopts.Image, dopts.Namespace, artifacts)
+		spdxReport, err = addon.GenerateSpdxReport(dfile.Filepath, dopts.Image, dopts.Namespace, artifacts, toolversion)
 		if err != nil {
 			return errors.Wrap(err, "generating spdx report")
 		}

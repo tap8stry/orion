@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tap8stry/orion/pkg/common"
 	"github.com/tap8stry/orion/pkg/engine"
+	goVersion "go.hein.dev/go-version"
 )
 
 //Discover :
@@ -59,7 +60,10 @@ EXAMPLES
 				Format:         *format,
 			}
 
-			if err := DiscoveryDeps(ctx, dopts); err != nil {
+			v := goVersion.Func(shortened, version, commit, date)
+			var vjson = goVersion.Info{}
+			json.Unmarshal([]byte(v), &vjson)
+			if err := DiscoveryDeps(ctx, dopts, vjson.Version); err != nil {
 				return errors.Wrapf(err, "discovery task for %s failed", dopts.DockerfilePath)
 			}
 
@@ -69,9 +73,9 @@ EXAMPLES
 }
 
 //DiscoveryDeps :
-func DiscoveryDeps(ctx context.Context, dopts common.DiscoverOpts) error {
+func DiscoveryDeps(ctx context.Context, dopts common.DiscoverOpts, version string) error {
 	b, _ := json.Marshal(dopts)
-	fmt.Printf("\nStart discovery with inputs: %q", string(b))
-	engine.StartDiscovery(context.Background(), dopts)
+	fmt.Printf("\nStart discovery tool verion %s with inputs: %q", version, string(b))
+	engine.StartDiscovery(context.Background(), dopts, version)
 	return nil
 }
