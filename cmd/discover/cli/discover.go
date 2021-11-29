@@ -21,31 +21,33 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/pkg/errors"
 	"github.com/tap8stry/orion/pkg/common"
 	"github.com/tap8stry/orion/pkg/engine"
+	goVersion "go.hein.dev/go-version"
 )
 
 //Discover :
 func Discover() *ffcli.Command {
 	var (
 		flagset    = flag.NewFlagSet("discover", flag.ExitOnError)
-		dockerfile = flagset.String("d", "", "dockerfile pathname")
+		dockerfile = flagset.String("f", "", "dockerfile pathname")
 		image      = flagset.String("i", "", "image name:tag")
 		namespace  = flagset.String("n", "", "SBOM namespace")
-		outputfp   = flagset.String("f", "", "output file path, default: ./result.spdx")
+		outputfp   = flagset.String("r", "", "output file path, default: ./result.spdx")
 		format     = flagset.String("o", "", "output format (json, spdx) default: spdx")
 	)
 	return &ffcli.Command{
 		Name:       "discover",
-		ShortUsage: "orion discover -d <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -f <output filepath> -o <format>",
+		ShortUsage: "orion discover -f <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -r <output filepath> -o <format>",
 		ShortHelp:  `Discover software dependencies`,
 		LongHelp: `Discover software dependencies not managed by package managers
 EXAMPLES
   # discover all dependencies not managed by package managers
-  orion discover -d ./Dockerfile -i binderancient:latest -n https://github.com/myorg/myproject -f result.spdx -o spdx
+  orion discover -f ./Dockerfile -i binderancient:latest -n https://github.com/myorg/myproject -r result.spdx -o spdx
 `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
@@ -54,11 +56,14 @@ EXAMPLES
 				DockerfilePath: *dockerfile,
 				Image:          *image,
 				Namespace:      *namespace,
-				OutFilepath:    *outputfp,
+				OutFilepath:    strings.TrimSpace(*outputfp),
 				Format:         *format,
 			}
 
-			if err := DiscoveryDeps(ctx, dopts); err != nil {
+			v := goVersion.Func(shortened, version, commit, date)
+			var vjson = goVersion.Info{}
+			json.Unmarshal([]byte(v), &vjson)
+			if err := DiscoveryDeps(ctx, dopts, vjson.Version); err != nil {
 				return errors.Wrapf(err, "discovery task for %s failed", dopts.DockerfilePath)
 			}
 
@@ -68,9 +73,9 @@ EXAMPLES
 }
 
 //DiscoveryDeps :
-func DiscoveryDeps(ctx context.Context, dopts common.DiscoverOpts) error {
+func DiscoveryDeps(ctx context.Context, dopts common.DiscoverOpts, version string) error {
 	b, _ := json.Marshal(dopts)
-	fmt.Printf("\nStart discovery with inputs: %q", string(b))
-	engine.StartDiscovery(context.Background(), dopts)
+	fmt.Printf("\nStart discovery tool verion %s with inputs: %q", version, string(b))
+	engine.StartDiscovery(context.Background(), dopts, version)
 	return nil
 }

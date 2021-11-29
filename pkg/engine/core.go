@@ -31,7 +31,7 @@ import (
 )
 
 //StartDiscovery : entrypoint for discovery core function
-func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
+func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion string) error {
 	//get Dockerfile
 	dfile, err := dockerfile.GetDockerfile(dopts.DockerfilePath)
 	if err != nil {
@@ -52,7 +52,11 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 	//save traces
 	filename := fmt.Sprintf("%s-trace.%s", common.DefaultFilename, common.FormatJSON)
 	if len(dopts.OutFilepath) > 0 {
-		filename = fmt.Sprintf("%s-trace.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatJSON)
+		if strings.LastIndex(dopts.OutFilepath, ".") > 0 {
+			filename = fmt.Sprintf("%s-trace.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatJSON)
+		} else {
+			filename = fmt.Sprintf("%s-trace.%s", dopts.OutFilepath, common.FormatJSON)
+		}
 	}
 	data, _ := json.MarshalIndent(dfile, "", "  ")
 	common.SaveFile(filename, data)
@@ -71,7 +75,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 			fmt.Printf("\nerror verifying addon installs: %s", err.Error())
 			return errors.Wrap(err, "verifying add-ons against image")
 		}
-		spdxReport, err = addon.GenerateSpdxReport(dfile.Filepath, dopts.Image, dopts.Namespace, artifacts)
+		spdxReport, err = addon.GenerateSpdxReport(dfile.Filepath, dopts.Image, dopts.Namespace, artifacts, toolversion)
 		if err != nil {
 			return errors.Wrap(err, "generating spdx report")
 		}
@@ -79,7 +83,12 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts) error {
 	//save spdx report
 	filename = fmt.Sprintf("%s.%s", common.DefaultFilename, common.FormatSpdx)
 	if len(dopts.OutFilepath) > 0 {
-		filename = fmt.Sprintf("%s.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatSpdx)
+		if strings.LastIndex(dopts.OutFilepath, ".") > 0 {
+			filename = fmt.Sprintf("%s.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatSpdx)
+		} else {
+			filename = fmt.Sprintf("%s.%s", dopts.OutFilepath, common.FormatSpdx)
+		}
+
 	}
 	common.SaveFile(filename, []byte(spdxReport))
 	fmt.Printf("\nclean up temporary files ...\n")
