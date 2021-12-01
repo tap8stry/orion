@@ -50,16 +50,18 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 		fmt.Printf("\ngenerate addon traces for dockerfile %q, stage %q, %d addons found", dfile.Filepath, stage.StageID, len(installTraces))
 	}
 	//save traces
-	filename := fmt.Sprintf("%s-trace.%s", common.DefaultFilename, common.FormatJSON)
-	if len(dopts.OutFilepath) > 0 {
-		if strings.LastIndex(dopts.OutFilepath, ".") > 0 {
-			filename = fmt.Sprintf("%s-trace.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatJSON)
-		} else {
-			filename = fmt.Sprintf("%s-trace.%s", dopts.OutFilepath, common.FormatJSON)
+	if dopts.SaveTrace {
+		filename := fmt.Sprintf("%s-trace.%s", common.DefaultFilename, common.FormatJSON)
+		if len(dopts.OutFilepath) > 0 {
+			if strings.LastIndex(dopts.OutFilepath, ".") > 0 {
+				filename = fmt.Sprintf("%s-trace.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatJSON)
+			} else {
+				filename = fmt.Sprintf("%s-trace.%s", dopts.OutFilepath, common.FormatJSON)
+			}
 		}
+		data, _ := json.MarshalIndent(dfile, "", "  ")
+		common.SaveFile(filename, data)
 	}
-	data, _ := json.MarshalIndent(dfile, "", "  ")
-	common.SaveFile(filename, data)
 
 	//verify and produce SPDX if image provided
 	if len(dopts.Image) > 0 {
@@ -81,7 +83,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 		}
 	}
 	//save spdx report
-	filename = fmt.Sprintf("%s.%s", common.DefaultFilename, common.FormatSpdx)
+	filename := fmt.Sprintf("%s.%s", common.DefaultFilename, common.FormatSpdx)
 	if len(dopts.OutFilepath) > 0 {
 		if strings.LastIndex(dopts.OutFilepath, ".") > 0 {
 			filename = fmt.Sprintf("%s.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatSpdx)

@@ -38,11 +38,12 @@ func Discover() *ffcli.Command {
 		image      = flagset.String("i", "", "image name:tag")
 		namespace  = flagset.String("n", "", "SBOM namespace")
 		outputfp   = flagset.String("r", "", "output file path, default: ./result.spdx")
-		format     = flagset.String("o", "", "output format (json, spdx) default: spdx")
+		format     = flagset.String("o", "", "output format (json, spdx), default: spdx")
+		savetrace  = flagset.Bool("s", false, "save trace report, default: false")
 	)
 	return &ffcli.Command{
 		Name:       "discover",
-		ShortUsage: "orion discover -f <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -r <output filepath> -o <format>",
+		ShortUsage: "orion discover -f <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -r <output filepath> -o <format> -s <save traces>",
 		ShortHelp:  `Discover software dependencies`,
 		LongHelp: `Discover software dependencies not managed by package managers
 EXAMPLES
@@ -58,6 +59,7 @@ EXAMPLES
 				Namespace:      *namespace,
 				OutFilepath:    strings.TrimSpace(*outputfp),
 				Format:         *format,
+				SaveTrace:      *savetrace,
 			}
 
 			v := goVersion.Func(shortened, version, commit, date)

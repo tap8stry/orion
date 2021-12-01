@@ -35,6 +35,7 @@ type DiscoverOpts struct {
 	Format         string
 	Image          string
 	Namespace      string
+	SaveTrace      bool
 }
 
 //Dockerfile :
