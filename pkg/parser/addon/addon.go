@@ -31,6 +31,7 @@ const (
 	CP          = "cp"
 	MV          = "mv"
 	CD          = "cd"
+	MKDIR       = "mkdir"
 	GIT         = "git"
 	GITCLONE    = "git clone"
 	GITCHECKOUT = "git checkout"
@@ -70,15 +71,18 @@ func DiscoverAddonArtifacts(buildStage *common.BuildStage, dopts common.Discover
 			workdir = replaceArgEnvVariable(cmd.Next.Value, stageArgsEnvs)
 			continue
 		}
+
 		if strings.EqualFold(cmd.Value, dockerfile.RUN) &&
 			(strings.Contains(cmd.Next.Value, CURL) ||
 				strings.Contains(cmd.Next.Value, WGET) ||
 				strings.Contains(cmd.Next.Value, GIT)) { // process RUN curl/wget/git
+
 			installs := generateCurlWgetGitTraces(workdir, cmd.Next.Value, stageArgsEnvs)
 			if len(installs) > 0 {
 				installTraces = append(installTraces, installs...)
 			}
 		}
+
 		if strings.EqualFold(cmd.Value, dockerfile.COPY) || strings.EqualFold(cmd.Value, dockerfile.ADD) { // process COPY/ADD
 			installs := generateCopyAddTraces(workdir, cmd.Original, dopts.Namespace, stageArgsEnvs)
 			if installs != nil {
@@ -95,8 +99,7 @@ func DiscoverAddonArtifacts(buildStage *common.BuildStage, dopts common.Discover
 // generateCurlWgetGitTraces produces the traces of one RUN of "curl" or/and "wget" install commands
 func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string) []common.InstallTrace {
 	installTraces := []common.InstallTrace{}
-
-	installsets := parseSubcommands(cmd, "&&")
+	installsets := parseSubcommands(cmd)
 	currentdir := workdir
 
 	for index := range installsets {
@@ -108,7 +111,6 @@ func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string)
 		for k := 0; k < len(installsets[index].Commands); k++ {
 			subCmd := installsets[index].Commands[k]
 			args := parseLine(subCmd, " ")
-
 			switch args[0] {
 			case CURL:
 				installTrace.Origin, m[j] = processCurl(args, currentdir, stageargs)
@@ -128,30 +130,50 @@ func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string)
 				}
 			case TAR:
 				trace := processTar(args, currentdir, stageargs)
-				if len(trace.Source) > 0 && existInInstallTrace(m, trace.Source) {
-					m[j] = trace
-					j++
+				if len(trace.Source) > 0 {
+					if existInInstallTrace(m, trace.Source) { //belongs to the current install
+						m[j] = trace
+						j++
+					} else {
+						checkEarlierInstalls(&installTraces, trace)
+					}
 				}
 			case UNZIP:
 				trace := processUnzip(args, currentdir, stageargs)
-				if len(trace.Source) > 0 && existInInstallTrace(m, trace.Source) {
-					m[j] = trace
-					j++
+				if len(trace.Source) > 0 {
+					if existInInstallTrace(m, trace.Source) {
+						m[j] = trace
+						j++
+					} else {
+						checkEarlierInstalls(&installTraces, trace)
+					}
 				}
 			case CP:
 				trace := processCp(args, currentdir, stageargs)
-				if len(trace.Source) > 0 && existInInstallTrace(m, trace.Source) {
-					m[j] = trace
-					j++
+				if len(trace.Source) > 0 {
+					if existInInstallTrace(m, trace.Source) {
+						m[j] = trace
+						j++
+					} else {
+						checkEarlierInstalls(&installTraces, trace)
+					}
 				}
 			case MV:
 				trace := processMv(args, currentdir, stageargs)
-				if len(trace.Source) > 0 && existInInstallTrace(m, trace.Source) {
-					m[j] = trace
-					j++
+				if len(trace.Source) > 0 {
+					if existInInstallTrace(m, trace.Source) {
+						m[j] = trace
+						j++
+					} else {
+						checkEarlierInstalls(&installTraces, trace)
+					}
 				}
 			case CD: //update the current dir
 				currentdir = processCd(args, currentdir, stageargs)
+				/*case MKDIR: //add a new possible destination
+				trace := processMkdir(args, currentdir, stageargs)
+				m[j] = trace
+				j++ */
 			}
 		}
 		if len(installTrace.Origin) > 0 && len(m) > 0 {
@@ -177,27 +199,39 @@ func generateCopyAddTraces(workdir, cmd, namespace string, stageargs map[string]
 func parseLine(line, separator string) []string {
 	cmds := strings.Split(line, separator)
 	newCmds := []string{}
-	for i, str := range cmds {
-		cmds[i] = strings.Trim(str, " ")         //trim space
-		cmds[i] = common.TrimQuoteMarks(cmds[i]) //trim quotation marks
-		if !strings.EqualFold(cmds[i], "") {
+	for i := range cmds {
+		for true { //remove all tabs
+			cmds[i] = strings.ReplaceAll(cmds[i], "\t", "")
+			if !strings.Contains(cmds[i], "\t") {
+				break
+			}
+		}
+		cmds[i] = strings.Trim(cmds[i], " ")
+		if len(cmds[i]) > 0 {
 			newCmds = append(newCmds, cmds[i])
 		}
 	}
 	return newCmds
 }
 
-// parseSubcommands parses a command (a subcommand in docker run)
-func parseSubcommands(line, sep string) []common.CommandSet {
+// parseSubcommands parse shell commands in a docker RUN operation
+func parseSubcommands(line string) []common.CommandSet {
 	sets := []common.CommandSet{}
 	cmdSetMap := common.CommandSet{}
 	m := make(map[int]string)
 	first := true
+	exclude := true //ignore subcmds before the first CURL/WGET/GIT
 	j := 0
 
-	cmds := parseLine(line, sep)
+	separator := "&&"                                                    //default
+	if !strings.Contains(line, "&&") && strings.Contains(line, "; \t") { //some shell scripts use '; \' as end of a command
+		separator = "; \t"
+	}
+
+	cmds := parseLine(line, separator)
 	for i := range cmds {
 		if strings.HasPrefix(cmds[i], CURL) || strings.HasPrefix(cmds[i], WGET) || strings.HasPrefix(cmds[i], GITCLONE) {
+			exclude = false
 			if first {
 				first = false
 			} else {
@@ -209,8 +243,10 @@ func parseSubcommands(line, sep string) []common.CommandSet {
 			m[j] = cmds[i]
 			j++
 		} else {
-			m[j] = cmds[i]
-			j++
+			if !exclude {
+				m[j] = cmds[i]
+				j++
+			}
 		}
 	}
 	cmdSetMap.Commands = m

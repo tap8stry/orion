@@ -41,11 +41,15 @@ func replaceArgEnvVariable(str string, args map[string]string) string {
 	for key, value := range args {
 		key1 := fmt.Sprintf("$%s", key)
 		key2 := fmt.Sprintf("${%s}", key)
+		key3 := "${" + key + "%%[a-z]*}"                      //used in python wget url, e.g. ${PYTHON_VERSION%%[a-z]*}
 		if strings.Contains(newStr, key1) && len(value) > 0 { //replace only if the value is not empty
 			newStr = strings.ReplaceAll(newStr, key1, value)
 		}
 		if strings.Contains(newStr, key2) && len(value) > 0 {
 			newStr = strings.ReplaceAll(newStr, key2, value)
+		}
+		if strings.Contains(newStr, key3) && len(value) > 0 {
+			newStr = strings.ReplaceAll(newStr, key3, value)
 		}
 	}
 	newStr = common.TrimQuoteMarks(newStr)
@@ -76,4 +80,31 @@ func existInInstallTrace(traces map[int]common.Trace, source string) bool {
 		}
 	}
 	return false
+}
+
+// checkEarlierInstalls checks if the source of trace matches a destination of previous steps of an install, add adds to the install's traces
+func checkEarlierInstalls(installs *[]common.InstallTrace, trace common.Trace) {
+
+	for _, install := range *installs {
+		for i := 0; i < len(install.Traces); i++ {
+			if strings.Contains(trace.Source, "*") { // source = "gradle-*.zip"
+				if strings.Contains(install.Traces[i].Destination, trace.Source[:strings.Index(trace.Source, "*")]) {
+					m := make(map[int]common.Trace)
+					m = install.Traces
+					m[len(install.Traces)] = trace
+					install.Traces = m
+					return
+				}
+			} else {
+				if strings.HasPrefix(trace.Source, install.Traces[i].Destination) {
+					m := make(map[int]common.Trace)
+					m = install.Traces
+					m[len(install.Traces)] = trace
+					install.Traces = m
+					return
+				}
+			}
+		}
+	}
+	return
 }
