@@ -35,8 +35,9 @@ func processCurl(args []string, workdir string, stageargs map[string]string) (st
 	}
 	origin := ""
 	for i, arg := range args {
+		arg = replaceArgEnvVariable(arg, stageargs)
 		if strings.HasPrefix(arg, "http") {
-			trace.Source = replaceArgEnvVariable(arg, stageargs)
+			trace.Source = arg
 			origin = trace.Source //the installation source
 		}
 		if (strings.HasPrefix(arg, "--output") || strings.HasPrefix(arg, "-o") || strings.EqualFold(arg, ">")) && len(args) > i+1 {
@@ -62,8 +63,10 @@ func processWget(args []string, workdir string, stageargs map[string]string) (st
 	useDefaultName := true
 
 	for i, arg := range args {
+		arg = common.TrimQuoteMarks(arg)
+		arg = replaceArgEnvVariable(arg, stageargs)
 		if strings.HasPrefix(arg, "http") {
-			trace.Source = replaceArgEnvVariable(arg, stageargs)
+			trace.Source = arg
 			origin = trace.Source
 			splits := strings.Split(arg, "/")
 			defaultName = replaceArgEnvVariable(splits[len(splits)-1], stageargs)
@@ -147,21 +150,39 @@ func processTar(args []string, workdir string, stageargs map[string]string) comm
 		Destination: workdir,
 		Workdir:     workdir,
 	}
-	for j := 1; j < len(args); j++ { //skip "tar"
-		if (strings.HasPrefix(args[j], "-C") || strings.HasPrefix(args[j], "--directory")) && len(args) > j+1 {
+	for j := 1; j < len(args); j++ { //start from j=1 to skip "tar")
+		if (args[j] == "-C" || strings.HasPrefix(args[j], "--directory")) && len(args) > j+1 {
 			trace.Destination = replaceArgEnvVariable(args[j+1], stageargs)
 			j++
 			continue
 		}
-		if strings.Contains(args[j], "x") && len(args) > j+1 { //could be -xvf, -xf, xvf, ...
+		if args[j] == "-xJC" && len(args) > j+1 {
+			trace.Destination = replaceArgEnvVariable(args[j+1], stageargs)
 			trace.Command += fmt.Sprintf(" %s", args[j])
-			trace.Source = replaceArgEnvVariable(args[j+1], stageargs)
-			if !strings.HasPrefix(trace.Source, "/") {
-				trace.Source = strings.TrimSuffix(workdir, "/") + "/" + trace.Source
-			}
 			j++
 			continue
 		}
+		if args[j] == "-f" && len(args) > j+1 {
+			trace.Source = replaceArgEnvVariable(args[j+1], stageargs)
+			j++
+			continue
+		}
+		if args[j] == "-xfC" && len(args) > j+2 {
+			trace.Destination = replaceArgEnvVariable(args[j+1], stageargs)
+			trace.Source = replaceArgEnvVariable(args[j+2], stageargs)
+			trace.Command += fmt.Sprintf(" %s", args[j])
+			j += 2
+			continue
+		}
+		if strings.Contains(args[j], "x") && strings.Contains(args[j], "f") && len(args) > j+1 { //could be -xvf, -xf, xvf, -zxvf...
+			trace.Command += fmt.Sprintf(" %s", args[j])
+			trace.Source = replaceArgEnvVariable(args[j+1], stageargs)
+			j++
+			continue
+		}
+	}
+	if !strings.HasPrefix(trace.Source, "/") {
+		trace.Source = strings.TrimSuffix(workdir, "/") + "/" + trace.Source
 	}
 	return trace
 }
