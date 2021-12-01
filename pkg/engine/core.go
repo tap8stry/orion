@@ -47,7 +47,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 		dfile.BuildStages[j].AddOnInstalls = append(dfile.BuildStages[j].AddOnInstalls, installTraces...)
 		dfile.BuildStages[j].EnvVariables = envs
 		dfile.BuildStages[j].Image = image
-		fmt.Printf("\ngenerating addon traces for dockerfile = %q, stage = %q, #addons = %d", dfile.Filepath, stage.StageID, len(installTraces))
+		fmt.Printf("\ngenerate addon traces for dockerfile %q, stage %q, %d addons found", dfile.Filepath, stage.StageID, len(installTraces))
 	}
 	//save traces
 	filename := fmt.Sprintf("%s-trace.%s", common.DefaultFilename, common.FormatJSON)
