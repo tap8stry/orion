@@ -28,7 +28,7 @@ import (
 // processCurl parses curl command
 func processCurl(args []string, workdir string, stageargs map[string]string) (string, common.Trace) {
 	trace := common.Trace{
-		Command:     CURL,
+		Command:     curlOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
@@ -53,7 +53,7 @@ func processCurl(args []string, workdir string, stageargs map[string]string) (st
 // processWget parses wget command
 func processWget(args []string, workdir string, stageargs map[string]string) (string, common.Trace) {
 	trace := common.Trace{
-		Command:     WGET,
+		Command:     wgetOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
@@ -98,7 +98,7 @@ func processGitClone(args []string, workdir string, stageargs map[string]string)
 	//http[s]://host.xz[:port]/path/to/repo.git/
 
 	trace := common.Trace{
-		Command:     GITCLONE,
+		Command:     gitCloneOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
@@ -130,7 +130,7 @@ func processGitClone(args []string, workdir string, stageargs map[string]string)
 //processGitCheckout parses git checkout command, recognizes only 'git checkout <branch or commit id>'
 func processGitCheckout(args []string, workdir, giturl string, stageargs map[string]string) common.Trace {
 	trace := common.Trace{
-		Command:     GITCHECKOUT,
+		Command:     gitCheckoutOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
@@ -145,7 +145,7 @@ func processGitCheckout(args []string, workdir, giturl string, stageargs map[str
 // processTar parses tar command
 func processTar(args []string, workdir string, stageargs map[string]string) common.Trace {
 	trace := common.Trace{
-		Command:     TAR,
+		Command:     tarOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
@@ -190,7 +190,7 @@ func processTar(args []string, workdir string, stageargs map[string]string) comm
 // processZip parses zip command
 func processUnzip(args []string, workdir string, stageargs map[string]string) common.Trace {
 	trace := common.Trace{
-		Command:     UNZIP,
+		Command:     unzipOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
@@ -225,7 +225,7 @@ func processUnzip(args []string, workdir string, stageargs map[string]string) co
 // processCp parses cp command
 func processCp(args []string, workdir string, stageargs map[string]string) common.Trace {
 	trace := common.Trace{
-		Command: CP,
+		Command: cpOperation,
 		Workdir: workdir,
 	}
 	for j := 1; j < len(args); j++ { //skip j=0 ("cp")
@@ -264,7 +264,7 @@ func processCd(args []string, workdir string, stageargs map[string]string) strin
 // processMv parses mv command
 func processMv(args []string, workdir string, stageargs map[string]string) common.Trace {
 	trace := common.Trace{
-		Command: MV,
+		Command: mvOperation,
 		Workdir: workdir,
 	}
 	for j := 1; j < len(args); j++ { //skip j=0 ("mv")

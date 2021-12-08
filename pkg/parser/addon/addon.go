@@ -24,19 +24,19 @@ import (
 )
 
 const (
-	CURL        = "curl"
-	WGET        = "wget"
-	TAR         = "tar"
-	UNZIP       = "unzip"
-	CP          = "cp"
-	MV          = "mv"
-	CD          = "cd"
-	MKDIR       = "mkdir"
-	GIT         = "git"
-	GITCLONE    = "git clone"
-	GITCHECKOUT = "git checkout"
-	COPY        = "COPY"
-	ADD         = "ADD"
+	curlOperation        = "curl"
+	wgetOperation        = "wget"
+	tarOperation         = "tar"
+	unzipOperation       = "unzip"
+	cpOperation          = "cp"
+	mvOperation          = "mv"
+	cdOperation          = "cd"
+	mkdirOperation       = "mkdir"
+	gitOperation         = "git"
+	gitCloneOperation    = "git clone"
+	gitCheckoutOperation = "git checkout"
+	copyOperation        = "COPY"
+	addOperation         = "ADD"
 )
 
 // DiscoverAddonArtifacts returns a list of artifaces installed by RUN curl/wget commands
@@ -73,9 +73,9 @@ func DiscoverAddonArtifacts(buildStage *common.BuildStage, dopts common.Discover
 		}
 
 		if strings.EqualFold(cmd.Value, dockerfile.RUN) &&
-			(strings.Contains(cmd.Next.Value, CURL) ||
-				strings.Contains(cmd.Next.Value, WGET) ||
-				strings.Contains(cmd.Next.Value, GIT)) { // process RUN curl/wget/git
+			(strings.Contains(cmd.Next.Value, curlOperation) ||
+				strings.Contains(cmd.Next.Value, wgetOperation) ||
+				strings.Contains(cmd.Next.Value, gitOperation)) { // process RUN curl/wget/git
 
 			installs := generateCurlWgetGitTraces(workdir, cmd.Next.Value, stageArgsEnvs)
 			if len(installs) > 0 {
@@ -112,23 +112,23 @@ func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string)
 			subCmd := installsets[index].Commands[k]
 			args := parseLine(subCmd, " ")
 			switch args[0] {
-			case CURL:
+			case curlOperation:
 				installTrace.Origin, m[j] = processCurl(args, currentdir, stageargs)
 				j++
-			case WGET:
+			case wgetOperation:
 				installTrace.Origin, m[j] = processWget(args, currentdir, stageargs)
 				j++
-			case GIT:
-				if len(args) > 2 && strings.EqualFold(args[1], strings.Fields(GITCLONE)[1]) {
+			case gitOperation:
+				if len(args) > 2 && strings.EqualFold(args[1], strings.Fields(gitCloneOperation)[1]) {
 					installTrace.Origin, m[j] = processGitClone(args, currentdir, stageargs)
 					j++
 					gitcloneUrl = installTrace.Origin
 				}
-				if len(args) > 2 && strings.EqualFold(args[1], strings.Fields(GITCHECKOUT)[1]) {
+				if len(args) > 2 && strings.EqualFold(args[1], strings.Fields(gitCheckoutOperation)[1]) {
 					m[j] = processGitCheckout(args, currentdir, gitcloneUrl, stageargs)
 					j++
 				}
-			case TAR:
+			case tarOperation:
 				trace := processTar(args, currentdir, stageargs)
 				if len(trace.Source) > 0 {
 					if existInInstallTrace(m, trace.Source) { //belongs to the current install
@@ -138,7 +138,7 @@ func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string)
 						checkEarlierInstalls(&installTraces, trace)
 					}
 				}
-			case UNZIP:
+			case unzipOperation:
 				trace := processUnzip(args, currentdir, stageargs)
 				if len(trace.Source) > 0 {
 					if existInInstallTrace(m, trace.Source) {
@@ -148,7 +148,7 @@ func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string)
 						checkEarlierInstalls(&installTraces, trace)
 					}
 				}
-			case CP:
+			case cpOperation:
 				trace := processCp(args, currentdir, stageargs)
 				if len(trace.Source) > 0 {
 					if existInInstallTrace(m, trace.Source) {
@@ -158,7 +158,7 @@ func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string)
 						checkEarlierInstalls(&installTraces, trace)
 					}
 				}
-			case MV:
+			case mvOperation:
 				trace := processMv(args, currentdir, stageargs)
 				if len(trace.Source) > 0 {
 					if existInInstallTrace(m, trace.Source) {
@@ -168,12 +168,8 @@ func generateCurlWgetGitTraces(workdir, cmd string, stageargs map[string]string)
 						checkEarlierInstalls(&installTraces, trace)
 					}
 				}
-			case CD: //update the current dir
+			case cdOperation: //update the current dir
 				currentdir = processCd(args, currentdir, stageargs)
-				/*case MKDIR: //add a new possible destination
-				trace := processMkdir(args, currentdir, stageargs)
-				m[j] = trace
-				j++ */
 			}
 		}
 		if len(installTrace.Origin) > 0 && len(m) > 0 {
@@ -230,7 +226,7 @@ func parseSubcommands(line string) []common.CommandSet {
 
 	cmds := parseLine(line, separator)
 	for i := range cmds {
-		if strings.HasPrefix(cmds[i], CURL) || strings.HasPrefix(cmds[i], WGET) || strings.HasPrefix(cmds[i], GITCLONE) {
+		if strings.HasPrefix(cmds[i], curlOperation) || strings.HasPrefix(cmds[i], wgetOperation) || strings.HasPrefix(cmds[i], gitCloneOperation) {
 			exclude = false
 			if first {
 				first = false
