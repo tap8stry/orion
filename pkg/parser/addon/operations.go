@@ -28,15 +28,16 @@ import (
 // processCurl parses curl command
 func processCurl(args []string, workdir string, stageargs map[string]string) (string, common.Trace) {
 	trace := common.Trace{
-		Command:     CURL,
+		Command:     curlOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
 	}
 	origin := ""
 	for i, arg := range args {
+		arg = replaceArgEnvVariable(arg, stageargs)
 		if strings.HasPrefix(arg, "http") {
-			trace.Source = replaceArgEnvVariable(arg, stageargs)
+			trace.Source = arg
 			origin = trace.Source //the installation source
 		}
 		if (strings.HasPrefix(arg, "--output") || strings.HasPrefix(arg, "-o") || strings.EqualFold(arg, ">")) && len(args) > i+1 {
@@ -52,7 +53,7 @@ func processCurl(args []string, workdir string, stageargs map[string]string) (st
 // processWget parses wget command
 func processWget(args []string, workdir string, stageargs map[string]string) (string, common.Trace) {
 	trace := common.Trace{
-		Command:     WGET,
+		Command:     wgetOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
@@ -62,8 +63,10 @@ func processWget(args []string, workdir string, stageargs map[string]string) (st
 	useDefaultName := true
 
 	for i, arg := range args {
+		arg = common.TrimQuoteMarks(arg)
+		arg = replaceArgEnvVariable(arg, stageargs)
 		if strings.HasPrefix(arg, "http") {
-			trace.Source = replaceArgEnvVariable(arg, stageargs)
+			trace.Source = arg
 			origin = trace.Source
 			splits := strings.Split(arg, "/")
 			defaultName = replaceArgEnvVariable(splits[len(splits)-1], stageargs)
@@ -95,7 +98,7 @@ func processGitClone(args []string, workdir string, stageargs map[string]string)
 	//http[s]://host.xz[:port]/path/to/repo.git/
 
 	trace := common.Trace{
-		Command:     GITCLONE,
+		Command:     gitCloneOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
@@ -127,7 +130,7 @@ func processGitClone(args []string, workdir string, stageargs map[string]string)
 //processGitCheckout parses git checkout command, recognizes only 'git checkout <branch or commit id>'
 func processGitCheckout(args []string, workdir, giturl string, stageargs map[string]string) common.Trace {
 	trace := common.Trace{
-		Command:     GITCHECKOUT,
+		Command:     gitCheckoutOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
@@ -142,26 +145,44 @@ func processGitCheckout(args []string, workdir, giturl string, stageargs map[str
 // processTar parses tar command
 func processTar(args []string, workdir string, stageargs map[string]string) common.Trace {
 	trace := common.Trace{
-		Command:     TAR,
+		Command:     tarOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
 	}
-	for j := 1; j < len(args); j++ { //skip "tar"
-		if (strings.HasPrefix(args[j], "-C") || strings.HasPrefix(args[j], "--directory")) && len(args) > j+1 {
+	for j := 1; j < len(args); j++ { //start from j=1 to skip "tar")
+		if (args[j] == "-C" || strings.HasPrefix(args[j], "--directory")) && len(args) > j+1 {
 			trace.Destination = replaceArgEnvVariable(args[j+1], stageargs)
 			j++
 			continue
 		}
-		if strings.Contains(args[j], "x") && len(args) > j+1 { //could be -xvf, -xf, xvf, ...
+		if args[j] == "-xJC" && len(args) > j+1 {
+			trace.Destination = replaceArgEnvVariable(args[j+1], stageargs)
 			trace.Command += fmt.Sprintf(" %s", args[j])
-			trace.Source = replaceArgEnvVariable(args[j+1], stageargs)
-			if !strings.HasPrefix(trace.Source, "/") {
-				trace.Source = strings.TrimSuffix(workdir, "/") + "/" + trace.Source
-			}
 			j++
 			continue
 		}
+		if args[j] == "-f" && len(args) > j+1 {
+			trace.Source = replaceArgEnvVariable(args[j+1], stageargs)
+			j++
+			continue
+		}
+		if args[j] == "-xfC" && len(args) > j+2 {
+			trace.Destination = replaceArgEnvVariable(args[j+1], stageargs)
+			trace.Source = replaceArgEnvVariable(args[j+2], stageargs)
+			trace.Command += fmt.Sprintf(" %s", args[j])
+			j += 2
+			continue
+		}
+		if strings.Contains(args[j], "x") && strings.Contains(args[j], "f") && len(args) > j+1 { //could be -xvf, -xf, xvf, -zxvf...
+			trace.Command += fmt.Sprintf(" %s", args[j])
+			trace.Source = replaceArgEnvVariable(args[j+1], stageargs)
+			j++
+			continue
+		}
+	}
+	if !strings.HasPrefix(trace.Source, "/") {
+		trace.Source = strings.TrimSuffix(workdir, "/") + "/" + trace.Source
 	}
 	return trace
 }
@@ -169,7 +190,7 @@ func processTar(args []string, workdir string, stageargs map[string]string) comm
 // processZip parses zip command
 func processUnzip(args []string, workdir string, stageargs map[string]string) common.Trace {
 	trace := common.Trace{
-		Command:     UNZIP,
+		Command:     unzipOperation,
 		Source:      "",
 		Destination: workdir,
 		Workdir:     workdir,
@@ -204,7 +225,7 @@ func processUnzip(args []string, workdir string, stageargs map[string]string) co
 // processCp parses cp command
 func processCp(args []string, workdir string, stageargs map[string]string) common.Trace {
 	trace := common.Trace{
-		Command: CP,
+		Command: cpOperation,
 		Workdir: workdir,
 	}
 	for j := 1; j < len(args); j++ { //skip j=0 ("cp")
@@ -243,7 +264,7 @@ func processCd(args []string, workdir string, stageargs map[string]string) strin
 // processMv parses mv command
 func processMv(args []string, workdir string, stageargs map[string]string) common.Trace {
 	trace := common.Trace{
-		Command: MV,
+		Command: mvOperation,
 		Workdir: workdir,
 	}
 	for j := 1; j < len(args); j++ { //skip j=0 ("mv")

@@ -73,11 +73,11 @@ func verifyArtifacts(installs []common.InstallTrace, fsdir string) []common.Veri
 		}
 
 		for _, trace := range install.Traces {
-			if strings.EqualFold(trace.Command, CURL) ||
-				strings.EqualFold(trace.Command, WGET) ||
-				strings.EqualFold(trace.Command, GIT) ||
-				strings.EqualFold(trace.Command, GITCHECKOUT) ||
-				strings.EqualFold(trace.Command, GITCLONE) {
+			if strings.EqualFold(trace.Command, curlOperation) ||
+				strings.EqualFold(trace.Command, wgetOperation) ||
+				strings.EqualFold(trace.Command, gitOperation) ||
+				strings.EqualFold(trace.Command, gitCheckoutOperation) ||
+				strings.EqualFold(trace.Command, gitCloneOperation) {
 				verified.IsDownload = true
 			}
 			path, isdir, err := getPath(trace, fsdir)
@@ -102,24 +102,24 @@ func getPath(trace common.Trace, dir string) (string, bool, error) {
 	var err error
 	des := trace.Destination
 	switch strings.Fields(trace.Command)[0] {
-	case COPY:
+	case copyOperation:
 		des = checkCOPYADDDestination(trace)
-	case ADD:
+	case addOperation:
 		des = checkCOPYADDDestination(trace)
-	case CP:
+	case cpOperation:
 		des, err = checkCpDestination(trace, dir)
 		if err != nil {
 			return des, false, err
 		}
-	case MV:
+	case mvOperation:
 		des, err = checkMvDestination(trace, dir)
 		if err != nil {
 			return des, false, err
 		}
-	case TAR: //TODO: investigate how to determin the destination from 'tar -x'
+	case tarOperation: //TODO: investigate how to determin the destination from 'tar -x'
 		fmt.Printf("\ndestination unknown, skip the trace for %s, ", trace.Command)
 		return des, false, errors.New("destination unknown, need manual review")
-	case UNZIP: //TODO: investigate how to determin the destination from 'unzip'
+	case unzipOperation: //TODO: investigate how to determin the destination from 'unzip'
 		fmt.Printf("\ndestination unknown, skip the trace for %s, ", trace.Command)
 		return des, false, errors.New("destination unknown, need manual review")
 	default: //do nothing
