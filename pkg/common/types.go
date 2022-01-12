@@ -25,6 +25,7 @@ const (
 	DockerfileEcosystem = "dockerfile"
 	FormatJSON          = "json"
 	FormatSpdx          = "spdx"
+	FormatCdx           = "cdx"
 	DefaultFilename     = "results"
 )
 
@@ -144,6 +145,7 @@ type Artifact struct {
 	Path        string `json:"path"`
 	Version     string `json:"version,omitempty"`
 	IsDirectory bool   `json:"isDirectory"`
+	SHA256      string `json:"sha256,omitempty"`
 }
 
 type VerifiedArtifact struct {

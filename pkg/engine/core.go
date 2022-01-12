@@ -72,27 +72,42 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 			return errors.Wrap(err, "creating build directory")
 		}
 		defer os.RemoveAll(buildContextDir)
-		artifacts, err := addon.VerifyAddOnInstalls(buildContextDir, dopts.Image, &dfile.BuildStages[len(dfile.BuildStages)-1])
+		artifacts, containerimage, err := addon.VerifyAddOnInstalls(buildContextDir, dopts.Image, &dfile.BuildStages[len(dfile.BuildStages)-1])
 		if err != nil {
 			fmt.Printf("\nerror verifying addon installs: %s", err.Error())
 			return errors.Wrap(err, "verifying add-ons against image")
 		}
-		spdxReport, err = addon.GenerateSpdxReport(dfile.Filepath, dopts.Image, dopts.Namespace, artifacts, toolversion)
-		if err != nil {
-			return errors.Wrap(err, "generating spdx report")
-		}
-	}
-	//save spdx report
-	filename := fmt.Sprintf("%s.%s", common.DefaultFilename, common.FormatSpdx)
-	if len(dopts.OutFilepath) > 0 {
-		if strings.LastIndex(dopts.OutFilepath, ".") > 0 {
-			filename = fmt.Sprintf("%s.%s", dopts.OutFilepath[:strings.LastIndex(dopts.OutFilepath, ".")], common.FormatSpdx)
-		} else {
-			filename = fmt.Sprintf("%s.%s", dopts.OutFilepath, common.FormatSpdx)
+
+		if dopts.Format == common.FormatCdx {
+			filename := getOutputFileName(dopts.OutFilepath, common.FormatCdx+"."+common.FormatJSON)
+			err = addon.StoreCdxJSON(filename, containerimage, dopts.Namespace, artifacts)
+			if err != nil {
+				return errors.Wrap(err, "generating CycloneDX report")
+			}
 		}
 
+		if dopts.Format == common.FormatSpdx || len(dopts.Format) == 0 {
+			spdxReport, err = addon.GenerateSpdxReport(dfile.Filepath, dopts.Image, dopts.Namespace, artifacts, toolversion)
+			if err != nil {
+				return errors.Wrap(err, "generating spdx report")
+			}
+			filename := getOutputFileName(dopts.OutFilepath, common.FormatSpdx)
+			common.SaveFile(filename, []byte(spdxReport))
+			fmt.Printf("\nclean up temporary files ...\n")
+			return nil
+		}
 	}
-	common.SaveFile(filename, []byte(spdxReport))
-	fmt.Printf("\nclean up temporary files ...\n")
 	return nil
+}
+
+func getOutputFileName(outputfile, format string) string {
+	filename := fmt.Sprintf("%s.%s", common.DefaultFilename, format)
+	if len(outputfile) > 0 {
+		if strings.LastIndex(outputfile, ".") > 0 {
+			filename = fmt.Sprintf("%s.%s", outputfile[:strings.LastIndex(outputfile, ".")], format)
+		} else {
+			filename = fmt.Sprintf("%s.%s", outputfile, format)
+		}
+	}
+	return filename
 }
