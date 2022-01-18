@@ -38,7 +38,7 @@ func Discover() *ffcli.Command {
 		image      = flagset.String("i", "", "image name:tag")
 		namespace  = flagset.String("n", "", "SBOM namespace")
 		outputfp   = flagset.String("r", "", "output file path, default: ./result.spdx")
-		format     = flagset.String("o", "", "output format (json, spdx), default: spdx")
+		format     = flagset.String("o", "", "output format (json, spdx, cdx), default: spdx")
 		savetrace  = flagset.Bool("s", false, "save trace report, default: false")
 	)
 	return &ffcli.Command{

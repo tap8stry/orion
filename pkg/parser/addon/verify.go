@@ -17,8 +17,11 @@
 package addon
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strings"
@@ -46,20 +49,27 @@ func check(e error) {
 }
 
 //VerifyAddOnInstalls :
-func VerifyAddOnInstalls(buildContextDir, image string, buildStage *common.BuildStage) ([]common.VerifiedArtifact, error) {
+func VerifyAddOnInstalls(buildContextDir, imagename string, buildStage *common.BuildStage) ([]common.VerifiedArtifact, common.Image, error) {
+	containerimage := common.Image{}
+
 	if len(buildStage.AddOnInstalls) == 0 {
 		fmt.Printf("\nno AddOnInstalls found for build stage = %s", buildStage.StageID)
-		return nil, nil
+		return nil, containerimage, nil
 	}
 
-	fsdir, err := imagefs.Get(image, buildContextDir)
+	fsdir, imgHash, imgOs, _, err := imagefs.Get(imagename, buildContextDir)
 	if err != nil {
 		fmt.Printf("\nerror in creating image filesystem: %s\n", err.Error())
-		return nil, err
+		return nil, containerimage, err
+	}
+	containerimage = common.Image{
+		Name:   imagename,
+		OSName: imgOs,
+		SHA256: imgHash,
 	}
 	fmt.Printf("\nverify against image's filesystem at %q", fsdir)
 	verified := verifyArtifacts(buildStage.AddOnInstalls, fsdir)
-	return verified, nil
+	return verified, containerimage, nil
 }
 
 func verifyArtifacts(installs []common.InstallTrace, fsdir string) []common.VerifiedArtifact {
@@ -80,15 +90,21 @@ func verifyArtifacts(installs []common.InstallTrace, fsdir string) []common.Veri
 				strings.EqualFold(trace.Command, gitCloneOperation) {
 				verified.IsDownload = true
 			}
-			path, isdir, err := getPath(trace, fsdir)
+			filepath, isdir, err := getPath(trace, fsdir)
 			if err != nil { //skip
 				continue
 			}
 			art := common.Artifact{
-				Name:        path,
-				Path:        path,
+				Name:        filepath,
+				Path:        filepath,
 				Version:     "",
 				IsDirectory: isdir,
+			}
+			if !art.IsDirectory {
+				sha, err := getSHA256(filepath)
+				if err == nil {
+					art.SHA256 = sha
+				}
 			}
 			verified.Artifacts = append(verified.Artifacts, art)
 		}
@@ -201,4 +217,21 @@ func GeneratePartialDockerData(buildArgs map[string]string, cmds []*parser.Node)
 		data += cmd.Original + "\n"
 	}
 	return data
+}
+
+func getSHA256(filepath string) (string, error) {
+	f, err := os.Open(filepath)
+	if err != nil {
+		fmt.Printf("\n failed in opening file %s", err.Error())
+		return "", err
+	}
+	defer f.Close()
+
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, f); err != nil {
+		fmt.Printf("\n failed in io.Copy %s", err.Error())
+		return "", err
+	}
+	value := hex.EncodeToString(hasher.Sum(nil))
+	return value, nil
 }

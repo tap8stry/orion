@@ -3,6 +3,7 @@ module github.com/tap8stry/orion
 go 1.16
 
 require (
+	github.com/CycloneDX/cyclonedx-go v0.4.0
 	github.com/docker/docker v20.10.9+incompatible // indirect
 	github.com/google/go-containerregistry v0.6.0
 	github.com/moby/buildkit v0.9.0
