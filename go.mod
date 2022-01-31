@@ -7,6 +7,7 @@ require (
 	github.com/docker/docker v20.10.9+incompatible // indirect
 	github.com/google/go-containerregistry v0.6.0
 	github.com/moby/buildkit v0.9.0
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pkg/errors v0.9.1
 	go.hein.dev/go-version v0.1.0
