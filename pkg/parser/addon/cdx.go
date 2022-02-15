@@ -82,7 +82,7 @@ func StoreCdxJSON(outfp string,
 	// Encode the BOM
 	fmt.Printf("\nresults saved to %s\n", outfp)
 	if _, err := os.Stat(outfp); err == nil { //delete if exists to avoid any leftover of old contents
-		fmt.Printf("an old report %s exists and delete it\n", outfp)
+		fmt.Printf("an old report %s exists and will override\n", outfp)
 		os.Remove(outfp)
 	}
 	bomWriter, err := os.OpenFile(outfp, os.O_WRONLY|os.O_CREATE, 0600)
