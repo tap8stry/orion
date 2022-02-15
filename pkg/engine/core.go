@@ -38,6 +38,10 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 		return errors.Wrap(err, "reading dockerfile")
 	}
 	fmt.Printf("\ngot dockerfile %q", dfile.Filepath)
+	err = os.Setenv(common.APIKeyEnv, dopts.APIKey) //set ibmcloud apikey for icrcredhelper
+	if err != nil {
+		return errors.Wrapf(err, "fail to set env variable API_KEY")
+	}
 
 	var spdxReport string
 
@@ -65,7 +69,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 
 	//verify and produce SPDX if image provided
 	if len(dopts.Image) > 0 {
-		fmt.Printf("\nget image %q for dockerfile %q\n", dopts.Image, dfile.Filepath)
+		fmt.Printf("\nget image %q for dockerfile %q", dopts.Image, dfile.Filepath)
 		buildContextDir, err := ioutil.TempDir(os.TempDir(), "build-ctx")
 		if err != nil {
 			fmt.Printf("\nerror creating build context dir: %s", err.Error())

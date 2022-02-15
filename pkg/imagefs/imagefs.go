@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
+	"github.com/tap8stry/orion/pkg/icrcredhelper"
 	"k8s.io/release/pkg/spdx"
 )
 
@@ -48,8 +49,13 @@ func Get(imageName, buildContextDir string) (string, string, string, string, err
 		fmt.Printf("\nparsing reference %s", imageName)
 		return "", "", "", "", errors.Wrap(err, "parsing image reference")
 	}
-
-	img, err := remote.Image(ref)
+	var img v1.Image
+	if icrcredhelper.IsICRRegistry(imageName) { //ibmcloud cr
+		icrHelper := icrcredhelper.NewICRCredentialsHelper()
+		img, err = remote.Image(ref, remote.WithAuthFromKeychain(authn.NewKeychainFromHelper(icrHelper)))
+	} else {
+		img, err = remote.Image(ref)
+	}
 	if err != nil {
 		fmt.Printf("\nerror getting image %q", ref.Name())
 		return "", "", "", "", errors.Wrap(err, "getting remote image")
@@ -104,11 +110,19 @@ func getImageReferences(imageName string) ([]struct {
 }, error) {
 	ref, err := name.ParseReference(imageName)
 	if err != nil {
+		fmt.Printf("\nerror in parsing image reference: %s", err.Error())
 		return nil, errors.Wrapf(err, "parsing image reference %s", imageName)
 	}
-	//descr, err := remote.Get(ref)
-	descr, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+
+	var descr *remote.Descriptor
+	if icrcredhelper.IsICRRegistry(ref.Name()) { //ibmcloud cr
+		icrHelper := icrcredhelper.NewICRCredentialsHelper()
+		descr, err = remote.Get(ref, remote.WithAuthFromKeychain(authn.NewKeychainFromHelper(icrHelper)))
+	} else {
+		descr, err = remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	}
 	if err != nil {
+		fmt.Printf("\nerror in fetching remotr descriptor: %s", err.Error())
 		return nil, errors.Wrap(err, "fetching remote descriptor")
 	}
 

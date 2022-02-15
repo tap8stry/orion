@@ -27,6 +27,7 @@ const (
 	FormatSpdx          = "spdx"
 	FormatCdx           = "cdx"
 	DefaultFilename     = "results"
+	APIKeyEnv           = "ORION_APIKEY"
 )
 
 //DiscoverOpts :
@@ -37,6 +38,7 @@ type DiscoverOpts struct {
 	Image          string
 	Namespace      string
 	SaveTrace      bool
+	APIKey         string
 }
 
 //Dockerfile :

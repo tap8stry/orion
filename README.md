@@ -55,11 +55,13 @@ where
 3. Command to produce/verify addon installation traces and produce SBOM report
 
 ```
-% ./orion discover -f <dockerfile-path> -n <sbom-namespace> -i <image-name:tag> -r <output-file-path>
+% ./orion discover -f <dockerfile-path> -n <sbom-namespace> -i <image-name:tag> -k <ibmcloud apikey> -r <output-file-path> -o <bom format, cdx or spdx>
 ```
-The SBOM report is saved to `<output-filepath>.spdx`.
+The SBOM report is saved to `<output-filepath>.spdx` or `<output-filepath>.cdx.json`.
 
-4. Work around if encounter access permission issue when decompressing image tarball
+4. `-k <ibmcloud apikey>` is required if the image is in a private repository on IBM Cloud container registry. Also [IBM Cloud CLI](https://cloud.ibm.com/docs/cli?topic=cli-install-ibmcloud-cli) must be installed in order to accquire access token.
+
+5. Work around if encounter access permission issue when decompressing image tarball
 
 You may encounter error messages like the following when running the command 3. 
 

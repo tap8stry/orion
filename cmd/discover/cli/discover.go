@@ -37,18 +37,21 @@ func Discover() *ffcli.Command {
 		dockerfile = flagset.String("f", "", "dockerfile pathname")
 		image      = flagset.String("i", "", "image name:tag")
 		namespace  = flagset.String("n", "", "SBOM namespace")
+		apikey     = flagset.String("k", "", "IBMcloud apikey for access images in ibmcloud cr")
 		outputfp   = flagset.String("r", "", "output file path, default: ./result.spdx")
 		format     = flagset.String("o", "", "output format (json, spdx, cdx), default: spdx")
 		savetrace  = flagset.Bool("s", false, "save trace report, default: false")
 	)
 	return &ffcli.Command{
 		Name:       "discover",
-		ShortUsage: "orion discover -f <dockerfile pathname> -i <iamge name:tag> -n <sbom namespace> -r <output filepath> -o <format> -s <save traces>",
+		ShortUsage: "orion discover -f <dockerfile pathname> -i <iamge name:tag> -k <ibmcloud apikey if using ibmcloud cr> -n <sbom namespace> -r <output filepath> -o <format> -s <save traces>",
 		ShortHelp:  `Discover software dependencies`,
 		LongHelp: `Discover software dependencies not managed by package managers
 EXAMPLES
   # discover all dependencies not managed by package managers
   orion discover -f ./Dockerfile -i binderancient:latest -n https://github.com/myorg/myproject -r result.spdx -o spdx
+  (for images in ibmcloud container registry)
+  orion discover -f ./Dockerfile -i us.icr.io/binderancient:latest -k OrwMix_u6MOuU1-tENTewGtp2v9 -n https://github.com/myorg/myproject -r result.spdx -o spdx
 `,
 		FlagSet: flagset,
 		Exec: func(ctx context.Context, args []string) error {
@@ -60,6 +63,7 @@ EXAMPLES
 				OutFilepath:    strings.TrimSpace(*outputfp),
 				Format:         *format,
 				SaveTrace:      *savetrace,
+				APIKey:         *apikey,
 			}
 
 			v := goVersion.Func(shortened, version, commit, date)
