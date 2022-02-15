@@ -38,8 +38,8 @@ func Discover() *ffcli.Command {
 		image      = flagset.String("i", "", "image name:tag")
 		namespace  = flagset.String("n", "", "SBOM namespace")
 		apikey     = flagset.String("k", "", "IBMcloud apikey for access images in ibmcloud cr")
-		outputfp   = flagset.String("r", "", "output file path, default: ./result.spdx")
-		format     = flagset.String("o", "", "output format (json, spdx, cdx), default: spdx")
+		outputfp   = flagset.String("r", "", "output file path, default: result")
+		format     = flagset.String("o", "", "output format (json, spdx, cdx), default: cdx")
 		savetrace  = flagset.Bool("s", false, "save trace report, default: false")
 	)
 	return &ffcli.Command{
@@ -80,7 +80,11 @@ EXAMPLES
 
 //DiscoveryDeps :
 func DiscoveryDeps(ctx context.Context, dopts common.DiscoverOpts, version string) error {
-	b, _ := json.Marshal(dopts)
+	printinpute := dopts
+	if len(printinpute.APIKey) > 0 {
+		printinpute.APIKey = "*********"
+	}
+	b, _ := json.Marshal(printinpute)
 	fmt.Printf("\nStart discovery tool verion %s with inputs: %q", version, string(b))
 	engine.StartDiscovery(context.Background(), dopts, version)
 	return nil

@@ -82,7 +82,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 			return errors.Wrap(err, "verifying add-ons against image")
 		}
 
-		if dopts.Format == common.FormatCdx {
+		if dopts.Format == common.FormatCdx || len(dopts.Format) == 0 {
 			filename := getOutputFileName(dopts.OutFilepath, common.FormatCdx+"."+common.FormatJSON)
 			err = addon.StoreCdxJSON(filename, containerimage, dopts.Namespace, artifacts)
 			if err != nil {
@@ -90,7 +90,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 			}
 		}
 
-		if dopts.Format == common.FormatSpdx || len(dopts.Format) == 0 {
+		if dopts.Format == common.FormatSpdx {
 			spdxReport, err = addon.GenerateSpdxReport(dfile.Filepath, dopts.Image, dopts.Namespace, artifacts, toolversion)
 			if err != nil {
 				return errors.Wrap(err, "generating spdx report")
