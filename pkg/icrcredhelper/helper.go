@@ -17,13 +17,17 @@
 package icrcredhelper
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker-credential-helpers/credentials"
-	"github.com/tap8stry/orion/pkg/common"
 )
 
 // ibmcloud cloud registries by region
@@ -40,10 +44,15 @@ var icrregions = [9]string{
 }
 
 const (
-	tokenUsername = "iambearer" //user must be "iambearer"
+	tokenUsername  = "iambearer"            //user must be "iambearer"
+	ibmcloudConfig = ".bluemix/config.json" //where token is stored
 )
 
 type ICRCredHelper struct {
+}
+
+type IBMCloudConfig struct {
+	IAMToken string `json:"IAMToken"`
 }
 
 func NewICRCredentialsHelper() credentials.Helper {
@@ -68,12 +77,35 @@ func IsICRRegistry(input string) bool {
 
 func (a ICRCredHelper) Get(serverURL string) (string, string, error) {
 	if !IsICRRegistry(serverURL) {
-		return "", "", errors.New("serverURL does not refer to IBMCloud Container Registry")
+		return "", "", errors.New("serverURL does not point to an IBMCloud Container Registry")
 	}
 
-	//get iam bearer token
-	apikey := os.Getenv(common.APIKeyEnv)
-	token := GetToken(apikey)
+	//get iam bearer token from ibmcloud config.json
+	thisuser, err := user.Current()
+	if err != nil {
+		fmt.Printf("\nerror getting home directory: %s", err.Error())
+	}
+	fp := filepath.Join(thisuser.HomeDir, ibmcloudConfig)
+	file, err := os.Open(fp)
+	if err != nil {
+		fmt.Printf("\nerror opening ibmcloud config file %q: %s", err.Error(), fp)
+		return "", "", err
+	}
+	dat, err := ioutil.ReadAll(file)
+	if err != nil {
+		fmt.Printf("\nerror reading ibmcloud config file %q: %s", err.Error(), fp)
+		return "", "", err
+	}
+	var icConfig IBMCloudConfig
+	err = json.Unmarshal(dat, &icConfig)
+	if err != nil {
+		fmt.Printf("\nerror unmarshal ibmcloud config %q: %s", err.Error(), fp)
+		return "", "", err
+	}
+	if len(icConfig.IAMToken) < 7 { //empty token
+		return "", "", errors.New("no ibmcloud iam token found")
+	}
+	token := icConfig.IAMToken[7:] //remove "Bearer "
 	return tokenUsername, token, nil
 }
 
