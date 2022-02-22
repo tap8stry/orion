@@ -27,6 +27,7 @@ const (
 	FormatSpdx          = "spdx"
 	FormatCdx           = "cdx"
 	DefaultFilename     = "results"
+	APIKeyEnv           = "ORION_APIKEY"
 )
 
 //DiscoverOpts :

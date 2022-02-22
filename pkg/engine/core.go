@@ -65,7 +65,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 
 	//verify and produce SPDX if image provided
 	if len(dopts.Image) > 0 {
-		fmt.Printf("\nget image %q for dockerfile %q\n", dopts.Image, dfile.Filepath)
+		fmt.Printf("\nget image %q for dockerfile %q", dopts.Image, dfile.Filepath)
 		buildContextDir, err := ioutil.TempDir(os.TempDir(), "build-ctx")
 		if err != nil {
 			fmt.Printf("\nerror creating build context dir: %s", err.Error())
@@ -78,7 +78,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 			return errors.Wrap(err, "verifying add-ons against image")
 		}
 
-		if dopts.Format == common.FormatCdx {
+		if dopts.Format == common.FormatCdx || len(dopts.Format) == 0 {
 			filename := getOutputFileName(dopts.OutFilepath, common.FormatCdx+"."+common.FormatJSON)
 			err = addon.StoreCdxJSON(filename, containerimage, dopts.Namespace, artifacts)
 			if err != nil {
@@ -86,7 +86,7 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 			}
 		}
 
-		if dopts.Format == common.FormatSpdx || len(dopts.Format) == 0 {
+		if dopts.Format == common.FormatSpdx {
 			spdxReport, err = addon.GenerateSpdxReport(dfile.Filepath, dopts.Image, dopts.Namespace, artifacts, toolversion)
 			if err != nil {
 				return errors.Wrap(err, "generating spdx report")
