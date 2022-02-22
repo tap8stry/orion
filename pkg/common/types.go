@@ -38,7 +38,6 @@ type DiscoverOpts struct {
 	Image          string
 	Namespace      string
 	SaveTrace      bool
-	APIKey         string
 }
 
 //Dockerfile :

@@ -38,10 +38,6 @@ func StartDiscovery(ctx context.Context, dopts common.DiscoverOpts, toolversion 
 		return errors.Wrap(err, "reading dockerfile")
 	}
 	fmt.Printf("\ngot dockerfile %q", dfile.Filepath)
-	err = os.Setenv(common.APIKeyEnv, dopts.APIKey) //set ibmcloud apikey for icrcredhelper
-	if err != nil {
-		return errors.Wrapf(err, "fail to set env variable API_KEY")
-	}
 
 	var spdxReport string
 
