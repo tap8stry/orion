@@ -57,11 +57,8 @@ where
 ```
 % ./orion discover -f <dockerfile-path> -n <sbom-namespace> -i <image-name:tag> -k <ibmcloud apikey> -r <output-file-path> -o <bom format, cdx or spdx>
 ```
-The SBOM report is saved to `<output-filepath>.spdx` or `<output-filepath>.cdx.json`.
 
-4. `-k <ibmcloud apikey>` is required if the image is in a private repository on IBM Cloud container registry. Also [IBM Cloud CLI](https://cloud.ibm.com/docs/cli?topic=cli-install-ibmcloud-cli) must be installed in order to accquire access token.
-
-5. Work around if encounter access permission issue when decompressing image tarball
+4. Work around if encounter access permission issue when decompressing image tarball
 
 You may encounter error messages like the following when running the command 3. 
 
@@ -75,3 +72,10 @@ This is caused by the access permission when decompressing the image tar file to
 ```
 % sudo ./orion discover -d <dockerfile-path> -n <sbom-namespace> -i <image-name:tag> -f <output-file-path>
 ```
+
+### Access to Private Images on Cloud Providers' Container Registries
+
+A credential helper is required to handle access credentials when pulling images from private repositories on cloud providers' container registry. The helper implements the interface as defined in [the authn package of go-containerregistry project](https://github.com/google/go-containerregistry/tree/main/pkg/authn). 
+
+The helper for IBM Cloud Container Registry is included under [pkg/credhelpers/icr](https://github.com/lluan444/orion/tree/main/pkg/credhelpers/icr). Example helpers for other cloud providers are suggested [here](https://github.com/google/go-containerregistry/tree/main/pkg/authn).
+
